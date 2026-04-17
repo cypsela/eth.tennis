@@ -1,0 +1,30 @@
+{
+  "name": "eth.cypsela",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Browser-verified ENS gateway",
+  "type": "module",
+  "scripts": {
+    "prepare": "husky",
+    "lint": "dprint check",
+    "format": "dprint fmt",
+    "build": "pnpm -r build",
+    "test": "pnpm -r test",
+    "ci": "pnpm -r ci"
+  },
+  "lint-staged": {
+    "*/**": "pnpm run format --allow-no-files"
+  },
+  "devDependencies": {
+    "dprint": "^0.52.0",
+    "husky": "^9.1.7",
+    "lint-staged": "^16.3.2",
+    "typescript": "^5.9.3"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "dprint",
+      "esbuild"
+    ]
+  }
+}
