@@ -1,0 +1,41 @@
+{
+  "name": "@cypsela/gateway-sw-core",
+  "version": "0.0.0",
+  "description": "ENS + verified-fetch service worker primitives for the eth.cypsela gateway",
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./dist/src/index.d.ts",
+      "import": "./dist/src/index.js"
+    }
+  },
+  "files": [
+    "./dist/src"
+  ],
+  "license": "MIT",
+  "author": "tabcat",
+  "keywords": [
+    "ens",
+    "ipfs",
+    "ipns",
+    "service-worker",
+    "gateway"
+  ],
+  "scripts": {
+    "build": "tsc",
+    "test": "vitest --dir test --config vitest.config.ts --run",
+    "test:watch": "vitest --dir test --config vitest.config.ts",
+    "api-docs": "typedoc src",
+    "ci": "pnpm build && pnpm test"
+  },
+  "dependencies": {
+    "@ensdomains/ensjs": "^4.2.0",
+    "@helia/verified-fetch": "^7.2.7",
+    "viem": "2.43.1"
+  },
+  "devDependencies": {
+    "typedoc": "^0.28.17",
+    "typescript": "^6.0.3",
+    "vitest": "^4.1.4"
+  }
+}
