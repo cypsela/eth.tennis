@@ -1,0 +1,74 @@
+import type { ErrorClass } from "./types.js";
+
+export abstract class GatewayError extends Error {
+  abstract readonly errorClass: ErrorClass;
+  constructor(public readonly ensName: string, message?: string) {
+    super(message ?? ensName);
+    this.name = new.target.name;
+  }
+}
+
+export class EnsNotFound extends GatewayError {
+  readonly errorClass = "ens-not-found" as const;
+}
+
+export class NoContenthash extends GatewayError {
+  readonly errorClass = "no-contenthash" as const;
+}
+
+export class UnsupportedProtocol extends GatewayError {
+  readonly errorClass = "unsupported-protocol" as const;
+  constructor(ensName: string, public readonly protocol: string) {
+    super(ensName, `unsupported protocol: ${protocol}`);
+  }
+}
+
+export class ContentUnreachable extends GatewayError {
+  readonly errorClass = "content-unreachable" as const;
+  constructor(ensName: string, public readonly cid: string, cause?: unknown) {
+    super(ensName, `content unreachable: ${cid}`);
+    if (cause !== undefined) {
+      (this as { cause?: unknown; }).cause = cause;
+    }
+  }
+}
+
+export class IpnsUnverifiable extends GatewayError {
+  readonly errorClass = "ipns-unverifiable" as const;
+  constructor(
+    ensName: string,
+    public readonly ipnsName: string,
+    cause?: unknown,
+  ) {
+    super(ensName, `ipns unverifiable: ${ipnsName}`);
+    if (cause !== undefined) {
+      (this as { cause?: unknown; }).cause = cause;
+    }
+  }
+}
+
+export class RpcDown extends GatewayError {
+  readonly errorClass = "rpc-down" as const;
+  constructor(ensName: string, cause?: unknown) {
+    super(ensName, `rpc down`);
+    if (cause !== undefined) {
+      (this as { cause?: unknown; }).cause = cause;
+    }
+  }
+}
+
+const STATUS: Record<ErrorClass, number> = {
+  "sw-unsupported": 500,
+  "sw-register-failed": 500,
+  "sw-activation-timeout": 504,
+  "ens-not-found": 404,
+  "no-contenthash": 404,
+  "unsupported-protocol": 415,
+  "content-unreachable": 502,
+  "ipns-unverifiable": 502,
+  "rpc-down": 503,
+};
+
+export function httpStatusFor(errorClass: ErrorClass): number {
+  return STATUS[errorClass];
+}
