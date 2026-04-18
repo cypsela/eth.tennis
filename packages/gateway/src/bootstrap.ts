@@ -1,7 +1,6 @@
 import type {
   BootstrapToSw,
   GatewayState,
-  LogEntry,
   SwToBootstrap,
 } from "@cypsela/gateway-sw-core";
 import { makeLogger } from "@cypsela/gateway-sw-core";
@@ -36,14 +35,10 @@ function ensNameFromHost(hostname: string, gatewayDomain: string): string {
 const GATEWAY_DOMAIN = import.meta.env.VITE_GATEWAY_DOMAIN ?? "gateway.example";
 
 async function runColdStart(terminal: Terminal, startedAt: number) {
-  const entries: LogEntry[] = [];
   const logger = makeLogger({
     source: "bootstrap",
     startedAt,
-    sink: (e) => {
-      entries.push(e);
-      terminal.append(e);
-    },
+    sink: (e) => terminal.append(e),
   });
 
   logger.info("starting eth.cypsela", ">");
