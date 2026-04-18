@@ -5,6 +5,7 @@ import {
   install,
   type RenderErrorArgs,
 } from "@cypsela/gateway-sw-core";
+import { injectState } from "./sw-helpers.ts";
 
 const sw = self as unknown as ServiceWorkerGlobalScope;
 
@@ -65,11 +66,3 @@ install(sw, {
   rpcUrl: RPC_URL,
   renderErrorResponse,
 });
-
-/** Exposed for unit tests. */
-export function injectState(html: string, state: GatewayState): string {
-  const script = `<script>window.__GATEWAY_STATE__ = ${
-    JSON.stringify(state)
-  };</script>`;
-  return html.replace("<!--STATE-->", script);
-}
