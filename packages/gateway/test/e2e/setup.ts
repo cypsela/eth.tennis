@@ -5,11 +5,11 @@ import { installRpcFixture, type RpcFixture } from "./fixtures/rpc.ts";
 export const test = base.extend<{ rpc: RpcFixture[]; ipfs: IpfsFixture[]; }>({
   rpc: [[], { option: true }],
   ipfs: [[], { option: true }],
-});
-
-test.beforeEach(async ({ page, rpc, ipfs }) => {
-  await installRpcFixture(page, rpc);
-  await installIpfsFixture(page, ipfs);
+  page: async ({ page, rpc, ipfs }, use) => {
+    await installRpcFixture(page, rpc);
+    await installIpfsFixture(page, ipfs);
+    await use(page);
+  },
 });
 
 export { expect } from "@playwright/test";

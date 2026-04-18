@@ -86,10 +86,28 @@ function handleEthCall(params: unknown[], fixtures: RpcFixture[]): Hex {
   }
   const fx = fixtures.find((f) => f.name === ensName);
   if (!fx || !fx.contenthash) return "0x";
-  const chHex =
-    ("0x"
-      + encodeContentHash(fx.contenthash.protocol, fx.contenthash.cid)) as Hex;
-  const innerResult = encodeAbiParameters([{ type: "bytes" }], [chHex]);
+  const chHex = contenthashHex(fx.contenthash.protocol, fx.contenthash.cid);
+  return encodeUniversalResolverResponse(chHex);
+}
+
+export function contenthashHex(
+  protocol:
+    | "ipfs"
+    | "ipns"
+    | "swarm"
+    | "onion"
+    | "onion3"
+    | "skynet"
+    | "arweave",
+  value: string,
+): Hex {
+  return ("0x" + encodeContentHash(protocol, value)) as Hex;
+}
+
+export function encodeUniversalResolverResponse(contenthashBytes: Hex): Hex {
+  const innerResult = encodeAbiParameters([{ type: "bytes" }], [
+    contenthashBytes,
+  ]);
   return encodeAbiParameters([{ type: "bytes" }, { type: "address" }], [
     innerResult,
     RESOLVER_ADDRESS,
