@@ -1,0 +1,41 @@
+name: publish
+
+on:
+  workflow_run:
+    workflows: ["ci"]
+    branches: [main]
+    types: [completed]
+  workflow_dispatch:
+
+jobs:
+  npm:
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          registry-url: "https://registry.npmjs.org/"
+          always-auth: true
+          cache: pnpm
+          cache-dependency-path: pnpm-lock.yaml
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm --filter @cypsela/gateway-sw-core build
+      - name: Check version
+        id: check
+        working-directory: packages/gateway-sw-core
+        run: |
+          LOCAL=$(npm pkg get version | tr -d '"')
+          PUBLISHED=$(npm view @cypsela/gateway-sw-core version 2>/dev/null || echo "")
+          echo "LOCAL=$LOCAL" >> $GITHUB_OUTPUT
+          echo "PUBLISHED=$PUBLISHED" >> $GITHUB_OUTPUT
+      - name: Publish
+        if: steps.check.outputs.LOCAL != steps.check.outputs.PUBLISHED
+        working-directory: packages/gateway-sw-core
+        run: npm publish --access public
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
