@@ -2,10 +2,10 @@ import { encode as encodeContentHash } from "@ensdomains/content-hash";
 import type { Page, Route } from "@playwright/test";
 import { decodeFunctionData, encodeAbiParameters, type Hex } from "viem";
 
-export interface RpcFixture {
-  name: string;
-  contenthash: { protocol: "ipfs" | "ipns"; cid: string; } | null;
-}
+export type RpcFixtures = Record<
+  string,
+  { protocol: "ipfs" | "ipns"; cid: string; } | null
+>;
 
 const RESOLVE_ABI = [{
   name: "resolve",
@@ -22,7 +22,7 @@ const RESOLVER_ADDRESS = "0x0000000000000000000000000000000000000001";
 
 export async function installRpcFixture(
   page: Page,
-  fixtures: RpcFixture[],
+  fixtures: RpcFixtures,
 ): Promise<void> {
   await page.context().route(
     "https://cloudflare-eth.com/**",
@@ -50,7 +50,7 @@ export async function installRpcFixture(
 function dispatch(
   method: string,
   params: unknown[],
-  fixtures: RpcFixture[],
+  fixtures: RpcFixtures,
 ): unknown {
   switch (method) {
     case "eth_chainId":
@@ -74,7 +74,7 @@ function dispatch(
   }
 }
 
-function handleEthCall(params: unknown[], fixtures: RpcFixture[]): Hex {
+function handleEthCall(params: unknown[], fixtures: RpcFixtures): Hex {
   const call = params[0] as { data: Hex; };
   let ensName: string;
   try {
@@ -84,9 +84,9 @@ function handleEthCall(params: unknown[], fixtures: RpcFixture[]): Hex {
   } catch {
     return "0x";
   }
-  const fx = fixtures.find((f) => f.name === ensName);
-  if (!fx || !fx.contenthash) return "0x";
-  const chHex = contenthashHex(fx.contenthash.protocol, fx.contenthash.cid);
+  const ch = fixtures[ensName];
+  if (!ch) return "0x";
+  const chHex = contenthashHex(ch.protocol, ch.cid);
   return encodeUniversalResolverResponse(chHex);
 }
 

@@ -5,7 +5,7 @@ import {
 import { expect, test } from "./setup.ts";
 
 test.describe("error paths", () => {
-  test.use({ rpc: [], ipfs: [] });
+  test.use({ rpc: {}, ipfs: {} });
 
   test("ens-not-found shows branded terminal with error line", async ({ page }) => {
     await page.goto("http://ghost.eth.localhost:5173/");

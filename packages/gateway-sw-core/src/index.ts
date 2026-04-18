@@ -90,6 +90,7 @@ export function install(
 
   scope.addEventListener("fetch", (event: FetchEvent) => {
     if ((event.request.destination as string) === "serviceworker") {
+      console.warn(CONTENT_SW_WARNING);
       void (async () => {
         const clients = await scope.clients.matchAll({
           includeUncontrolled: true,

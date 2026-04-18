@@ -1,22 +1,20 @@
 import { expect, test } from "./setup.ts";
 
 test.use({
-  rpc: [{
-    name: "vitalik.eth",
-    contenthash: {
+  rpc: {
+    "vitalik.eth": {
       protocol: "ipfs",
       cid: "bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi",
     },
-  }],
-  ipfs: [{
-    cid: "bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi",
-    paths: {
+  },
+  ipfs: {
+    "bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi": {
       "/index.html": {
         body: "<h1>hello vitalik</h1>",
         contentType: "text/html",
       },
     },
-  }],
+  },
 });
 
 test("cold first visit renders the site", async ({ page }) => {
