@@ -8,6 +8,7 @@
     "prepare": "husky",
     "lint": "dprint check",
     "format": "dprint fmt",
+    "dev": "pnpm --filter @cypsela/gateway dev",
     "build": "pnpm -r run build",
     "test": "pnpm -r run test",
     "ci": "pnpm -r run ci"
