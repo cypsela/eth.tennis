@@ -19,9 +19,12 @@
     "@cypsela/gateway-sw-core": "workspace:*"
   },
   "devDependencies": {
+    "@ensdomains/content-hash": "3.1.0-rc.1",
     "@playwright/test": "^1.59.1",
+    "esbuild": "^0.27.7",
     "jsdom": "^29.0.2",
     "typescript": "^6.0.3",
+    "viem": "2.43.1",
     "vite": "^7.3.2",
     "vitest": "^4.1.4"
   }

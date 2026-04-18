@@ -1,5 +1,6 @@
 /// <reference lib="webworker" />
 import {
+  type ContentFetcher,
   type GatewayState,
   httpStatusFor,
   install,
@@ -12,6 +13,7 @@ const sw = self as unknown as ServiceWorkerGlobalScope;
 const CACHE_VERSION = "bootstrap-v1";
 const GATEWAY_DOMAIN = import.meta.env.VITE_GATEWAY_DOMAIN ?? "gateway.example";
 const RPC_URL = import.meta.env.VITE_RPC_URL ?? "https://cloudflare-eth.com";
+const TEST_CONTENT_GATEWAY = import.meta.env.VITE_TEST_CONTENT_GATEWAY;
 
 const PRECACHE = ["/", "/index.html", "/src/styles.css"];
 
@@ -61,8 +63,18 @@ async function renderErrorResponse(args: RenderErrorArgs): Promise<Response> {
   });
 }
 
+const testContent: ContentFetcher | undefined = TEST_CONTENT_GATEWAY
+  ? {
+    async fetch(args) {
+      const path = args.path.startsWith("/") ? args.path : `/${args.path}`;
+      return fetch(`${TEST_CONTENT_GATEWAY}/ipfs/${args.cid}${path}`);
+    },
+  }
+  : undefined;
+
 install(sw, {
   gatewayDomain: GATEWAY_DOMAIN,
   rpcUrl: RPC_URL,
   renderErrorResponse,
+  ...(testContent ? { _content: testContent } : {}),
 });
