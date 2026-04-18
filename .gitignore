@@ -6,6 +6,8 @@ dist
 .env
 .env.*
 !.env.example
+!packages/*/.env.development
+!packages/*/.env.example
 coverage
 playwright-report
 test-results
