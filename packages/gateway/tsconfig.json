@@ -9,6 +9,12 @@
     "allowImportingTsExtensions": true,
     "verbatimModuleSyntax": true
   },
-  "include": ["src", "test", "vite.config.ts", "playwright.config.ts"],
+  "include": [
+    "src",
+    "test",
+    "vite.config.ts",
+    "vite.sw.config.ts",
+    "playwright.config.ts"
+  ],
   "exclude": ["dist"]
 }
