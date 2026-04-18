@@ -8,9 +8,9 @@
     "prepare": "husky",
     "lint": "dprint check",
     "format": "dprint fmt",
-    "build": "pnpm -r build",
-    "test": "pnpm -r test",
-    "ci": "pnpm -r ci"
+    "build": "pnpm -r run build",
+    "test": "pnpm -r run test",
+    "ci": "pnpm -r run ci"
   },
   "lint-staged": {
     "*/**": "pnpm run format --allow-no-files"
