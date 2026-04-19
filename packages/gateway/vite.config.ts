@@ -36,6 +36,12 @@ function serveSwInDev(): Plugin {
                   ?? process.env["VITE_TEST_CONTENT_GATEWAY"] ?? "",
               ),
               "process.env.NODE_ENV": JSON.stringify("development"),
+              "__SHELL_ASSETS__": JSON.stringify([]),
+              "__BYPASS_PREFIXES__": JSON.stringify([
+                "/@",
+                "/node_modules/",
+                "/src/",
+              ]),
             },
           });
           const code = result.outputFiles[0]?.text ?? "";
@@ -60,6 +66,7 @@ export default defineConfig({
     target: "es2022",
     outDir: "dist",
     emptyOutDir: true,
+    manifest: true,
     rollupOptions: {
       input: {
         bootstrap: resolve(__dirname, "index.html"),

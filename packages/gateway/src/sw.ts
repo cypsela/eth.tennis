@@ -5,6 +5,9 @@ import {
   type RenderShellArgs,
 } from "@cypsela/gateway-sw-core";
 
+declare const __SHELL_ASSETS__: string[];
+declare const __BYPASS_PREFIXES__: string[];
+
 const sw = self as unknown as ServiceWorkerGlobalScope;
 
 const CACHE_VERSION = "bootstrap-v1";
@@ -12,7 +15,15 @@ const GATEWAY_DOMAIN = import.meta.env.VITE_GATEWAY_DOMAIN ?? "gateway.example";
 const RPC_URL = import.meta.env.VITE_RPC_URL ?? "https://cloudflare-eth.com";
 const TEST_CONTENT_GATEWAY = import.meta.env.VITE_TEST_CONTENT_GATEWAY;
 
-const PRECACHE = ["/", "/index.html", "/src/styles.css"];
+const SHELL_ASSETS = __SHELL_ASSETS__;
+const BYPASS_PREFIXES = __BYPASS_PREFIXES__;
+const PRECACHE = ["/", "/index.html", ...SHELL_ASSETS];
+const BYPASS_PATHS = new Set<string>(SHELL_ASSETS);
+
+function shouldBypass(pathname: string): boolean {
+  if (BYPASS_PATHS.has(pathname)) return true;
+  return BYPASS_PREFIXES.some((p) => pathname.startsWith(p));
+}
 
 sw.addEventListener("install", (event) => {
   event.waitUntil(
@@ -32,6 +43,18 @@ sw.addEventListener("activate", (event) => {
     await sw
       .clients
       .claim();
+  })());
+});
+
+sw.addEventListener("fetch", (event) => {
+  if (event.request.mode === "navigate") return;
+  const url = new URL(event.request.url);
+  if (url.origin !== sw.location.origin) return;
+  if (!shouldBypass(url.pathname)) return;
+  event.respondWith((async () => {
+    const cache = await caches.open(CACHE_VERSION);
+    const hit = await cache.match(url.pathname);
+    return hit?.clone() ?? fetch(event.request);
   })());
 });
 
