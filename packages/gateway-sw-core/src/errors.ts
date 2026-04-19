@@ -33,14 +33,28 @@ export class ContentUnreachable extends GatewayError {
   }
 }
 
-export class IpnsUnverifiable extends GatewayError {
-  readonly errorClass = "ipns-unverifiable" as const;
+export class IpnsRecordNotFound extends GatewayError {
+  readonly errorClass = "ipns-record-not-found" as const;
   constructor(
     ensName: string,
     public readonly ipnsName: string,
     cause?: unknown,
   ) {
-    super(ensName, `ipns unverifiable: ${ipnsName}`);
+    super(ensName, `ipns record not found: ${ipnsName}`);
+    if (cause !== undefined) {
+      (this as { cause?: unknown; }).cause = cause;
+    }
+  }
+}
+
+export class IpnsRecordUnverifiable extends GatewayError {
+  readonly errorClass = "ipns-record-unverifiable" as const;
+  constructor(
+    ensName: string,
+    public readonly ipnsName: string,
+    cause?: unknown,
+  ) {
+    super(ensName, `ipns record unverifiable: ${ipnsName}`);
     if (cause !== undefined) {
       (this as { cause?: unknown; }).cause = cause;
     }
@@ -65,7 +79,8 @@ const STATUS: Record<ErrorClass, number> = {
   "no-contenthash": 404,
   "unsupported-protocol": 415,
   "content-unreachable": 502,
-  "ipns-unverifiable": 502,
+  "ipns-record-not-found": 404,
+  "ipns-record-unverifiable": 502,
   "rpc-down": 503,
 };
 

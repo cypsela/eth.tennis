@@ -16,7 +16,8 @@ export type ErrorClass =
   | "no-contenthash"
   | "unsupported-protocol"
   | "content-unreachable"
-  | "ipns-unverifiable"
+  | "ipns-record-not-found"
+  | "ipns-record-unverifiable"
   | "rpc-down";
 
 /** Decoded contenthash record (ENSIP-7). */

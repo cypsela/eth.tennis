@@ -1,6 +1,15 @@
 import { describe, expect, test, vi } from "vitest";
 import { createContentFetcherFromImpl } from "../src/content.js";
-import { ContentUnreachable, IpnsUnverifiable } from "../src/errors.js";
+import {
+  ContentUnreachable,
+  IpnsRecordNotFound,
+  IpnsRecordUnverifiable,
+} from "../src/errors.js";
+
+const IPNS_KEY =
+  "k51qzi5uqu5dktsyfv7xz8h631pri4ct7osmb43nibxiojpttxzoft6hdyyzg4";
+
+const noopResolver = { resolve: vi.fn() } as any;
 
 describe("content.fetch", () => {
   test("calls verifiedFetch with ipfs URL + path", async () => {
@@ -11,7 +20,7 @@ describe("content.fetch", () => {
         headers: { "content-type": "text/plain" },
       })
     );
-    const f = createContentFetcherFromImpl(impl as any);
+    const f = createContentFetcherFromImpl(impl as any, noopResolver);
     const res = await f.fetch({
       ensName: "vitalik.eth",
       protocol: "ipfs",
@@ -22,11 +31,11 @@ describe("content.fetch", () => {
     expect(res.status).toBe(200);
   });
 
-  test("wraps network errors as ContentUnreachable", async () => {
+  test("wraps ipfs network errors as ContentUnreachable", async () => {
     const impl = vi.fn(async () => {
       throw new Error("no providers");
     });
-    const f = createContentFetcherFromImpl(impl as any);
+    const f = createContentFetcherFromImpl(impl as any, noopResolver);
     await expect(
       f.fetch({ ensName: "x.eth", protocol: "ipfs", cid: "bafy", path: "/" }),
     )
@@ -34,15 +43,71 @@ describe("content.fetch", () => {
       .toBeInstanceOf(ContentUnreachable);
   });
 
-  test("wraps ipns verification failures as IpnsUnverifiable", async () => {
-    const impl = vi.fn(async () => {
-      throw new Error("ipns: record signature invalid");
+  test("resolves ipns then fetches ipfs URL with combined path", async () => {
+    const impl = vi.fn(async () => new Response("ok", { status: 200 }));
+    const resolver = {
+      resolve: vi.fn(async () => ({
+        cid: { toString: () => "bafyResolved" },
+        path: "subdir",
+      })),
+    } as any;
+    const f = createContentFetcherFromImpl(impl as any, resolver);
+    await f.fetch({
+      ensName: "x.eth",
+      protocol: "ipns",
+      cid: IPNS_KEY,
+      path: "/index.html",
     });
-    const f = createContentFetcherFromImpl(impl as any);
+    expect(impl).toHaveBeenCalledWith("ipfs://bafyResolved/subdir/index.html");
+  });
+
+  test("wraps RecordNotFoundError as IpnsRecordNotFound", async () => {
+    const impl = vi.fn();
+    const resolver = {
+      resolve: vi.fn(async () => {
+        const err = new Error("not found");
+        err.name = "RecordNotFoundError";
+        throw err;
+      }),
+    } as any;
+    const f = createContentFetcherFromImpl(impl as any, resolver);
     await expect(
-      f.fetch({ ensName: "x.eth", protocol: "ipns", cid: "k2", path: "/" }),
+      f.fetch({ ensName: "x.eth", protocol: "ipns", cid: IPNS_KEY, path: "/" }),
     )
       .rejects
-      .toBeInstanceOf(IpnsUnverifiable);
+      .toBeInstanceOf(IpnsRecordNotFound);
+    expect(impl).not.toHaveBeenCalled();
+  });
+
+  test("wraps RecordsFailedValidationError as IpnsRecordUnverifiable", async () => {
+    const impl = vi.fn();
+    const resolver = {
+      resolve: vi.fn(async () => {
+        const err = new Error("bad sig");
+        err.name = "RecordsFailedValidationError";
+        throw err;
+      }),
+    } as any;
+    const f = createContentFetcherFromImpl(impl as any, resolver);
+    await expect(
+      f.fetch({ ensName: "x.eth", protocol: "ipns", cid: IPNS_KEY, path: "/" }),
+    )
+      .rejects
+      .toBeInstanceOf(IpnsRecordUnverifiable);
+  });
+
+  test("wraps unknown ipns resolve errors as ContentUnreachable", async () => {
+    const impl = vi.fn();
+    const resolver = {
+      resolve: vi.fn(async () => {
+        throw new Error("something else");
+      }),
+    } as any;
+    const f = createContentFetcherFromImpl(impl as any, resolver);
+    await expect(
+      f.fetch({ ensName: "x.eth", protocol: "ipns", cid: IPNS_KEY, path: "/" }),
+    )
+      .rejects
+      .toBeInstanceOf(ContentUnreachable);
   });
 });

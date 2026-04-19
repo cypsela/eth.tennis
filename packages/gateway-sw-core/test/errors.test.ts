@@ -4,7 +4,8 @@ import {
   EnsNotFound,
   GatewayError,
   httpStatusFor,
-  IpnsUnverifiable,
+  IpnsRecordNotFound,
+  IpnsRecordUnverifiable,
   NoContenthash,
   RpcDown,
   UnsupportedProtocol,
@@ -20,8 +21,11 @@ describe("GatewayError subclasses", () => {
     expect(new ContentUnreachable("vitalik.eth", "bafy").errorClass).toBe(
       "content-unreachable",
     );
-    expect(new IpnsUnverifiable("vitalik.eth", "bafy").errorClass).toBe(
-      "ipns-unverifiable",
+    expect(new IpnsRecordNotFound("vitalik.eth", "k51").errorClass).toBe(
+      "ipns-record-not-found",
+    );
+    expect(new IpnsRecordUnverifiable("vitalik.eth", "k51").errorClass).toBe(
+      "ipns-record-unverifiable",
     );
     expect(new RpcDown("vitalik.eth").errorClass).toBe("rpc-down");
   });
@@ -37,7 +41,8 @@ describe("httpStatusFor", () => {
     expect(httpStatusFor("no-contenthash")).toBe(404);
     expect(httpStatusFor("unsupported-protocol")).toBe(415);
     expect(httpStatusFor("content-unreachable")).toBe(502);
-    expect(httpStatusFor("ipns-unverifiable")).toBe(502);
+    expect(httpStatusFor("ipns-record-not-found")).toBe(404);
+    expect(httpStatusFor("ipns-record-unverifiable")).toBe(502);
     expect(httpStatusFor("rpc-down")).toBe(503);
   });
 });
