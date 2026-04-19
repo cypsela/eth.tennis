@@ -87,8 +87,6 @@ async function runColdStart(terminal: Terminal, startedAt: number) {
 
   const final = await doneP;
   if (final.type === "done") {
-    logger.info("loading…", ">");
-    await new Promise((r) => setTimeout(r, 500));
     location.reload();
   }
 }

@@ -2,7 +2,7 @@
 import {
   type ContentFetcher,
   install,
-  type RenderErrorArgs,
+  type RenderShellArgs,
 } from "@cypsela/gateway-sw-core";
 
 const sw = self as unknown as ServiceWorkerGlobalScope;
@@ -35,7 +35,7 @@ sw.addEventListener("activate", (event) => {
   })());
 });
 
-async function renderErrorResponse(_args: RenderErrorArgs): Promise<Response> {
+async function renderBootstrapShell(_args: RenderShellArgs): Promise<Response> {
   const cache = await caches.open(CACHE_VERSION);
   const shell = await cache.match("/index.html");
   if (!shell) {
@@ -59,6 +59,6 @@ const testContent: ContentFetcher | undefined = TEST_CONTENT_GATEWAY
 install(sw, {
   gatewayDomain: GATEWAY_DOMAIN,
   rpcUrl: RPC_URL,
-  renderErrorResponse,
+  renderBootstrapShell,
   ...(testContent ? { _content: testContent } : {}),
 });

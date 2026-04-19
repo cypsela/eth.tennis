@@ -95,6 +95,58 @@ export function install(
     }
   });
 
+  const renderShell = (
+    request: Request,
+    ensName: string | null,
+    err?: unknown,
+  ): Response | Promise<Response> => {
+    if (opts.renderBootstrapShell) {
+      if (err === undefined) {
+        return opts.renderBootstrapShell({ request, ensName });
+      }
+      const errorClass = err instanceof GatewayError
+        ? err.errorClass
+        : "content-unreachable";
+      return opts.renderBootstrapShell({
+        request,
+        ensName,
+        error: err,
+        errorClass,
+      });
+    }
+    const status = err instanceof GatewayError
+      ? httpStatusFor(err.errorClass)
+      : err !== undefined
+      ? 500
+      : 200;
+    return new Response(err !== undefined ? String(err) : "", { status });
+  };
+
+  const resolveAndFetch = async (
+    ensName: string,
+    pathname: string,
+  ): Promise<Response> => {
+    const ch = await ensCache.getOrLoad(
+      ensName,
+      () => resolver.resolve(ensName),
+    );
+    const fetcher = await getContent();
+    const res = await fetcher.fetch({
+      ensName,
+      protocol: ch.protocol,
+      cid: ch.cid,
+      path: pathname,
+    });
+    if (!res.ok) {
+      throw new ContentUnreachable(
+        ensName,
+        ch.cid,
+        new Error(`HTTP ${res.status}`),
+      );
+    }
+    return res;
+  };
+
   scope.addEventListener("fetch", (event: FetchEvent) => {
     if ((event.request.destination as string) === "serviceworker") {
       console.warn(CONTENT_SW_WARNING);
@@ -126,6 +178,26 @@ export function install(
       event.respondWith(cached.clone());
       return;
     }
+
+    if (event.request.mode === "navigate") {
+      const site = event.request.headers.get("sec-fetch-site");
+      const inSite = site === "same-origin" || site === "same-site";
+      if (!inSite) {
+        event.respondWith(Promise.resolve(renderShell(event.request, ensName)));
+        return;
+      }
+      event.respondWith((async () => {
+        try {
+          const res = await resolveAndFetch(ensName, url.pathname);
+          contentCache.set(cacheKey, res.clone());
+          return res;
+        } catch (err) {
+          return renderShell(event.request, ensName, err);
+        }
+      })());
+      return;
+    }
+
     event.respondWith((async () => {
       try {
         const ch = await ensCache.getOrLoad(
@@ -139,27 +211,11 @@ export function install(
           cid: ch.cid,
           path: url.pathname,
         });
-        if (!res.ok) {
-          throw new ContentUnreachable(
-            ensName,
-            ch.cid,
-            new Error(`HTTP ${res.status}`),
-          );
+        if (res.ok) {
+          contentCache.set(cacheKey, res.clone());
         }
-        contentCache.set(cacheKey, res.clone());
         return res;
       } catch (err) {
-        const errorClass = err instanceof GatewayError
-          ? err.errorClass
-          : "content-unreachable";
-        if (opts.renderErrorResponse) {
-          return opts.renderErrorResponse({
-            request: event.request,
-            ensName,
-            error: err,
-            errorClass,
-          });
-        }
         const status = err instanceof GatewayError
           ? httpStatusFor(err.errorClass)
           : 500;
