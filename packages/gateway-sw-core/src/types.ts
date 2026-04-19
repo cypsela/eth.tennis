@@ -51,19 +51,11 @@ export interface InstallOpts {
   /** TTL for the in-memory ENS contenthash cache. Defaults to 5 min. */
   ensTtlMs?: number;
   /**
-   * Optional renderer for error responses. The gateway provides one that
-   * injects GatewayState into the precached bootstrap HTML. If omitted, the
-   * library returns a plain-text Response with the right HTTP status.
+   * Optional renderer for failed document fetches. Intended to return the
+   * precached bootstrap shell so the page cold-starts and retries live. If
+   * omitted, the library returns a plain-text Response with the right status.
    */
   renderErrorResponse?: (args: RenderErrorArgs) => Response | Promise<Response>;
-}
-
-/** State injected into the bootstrap HTML on error paths. */
-export interface GatewayState {
-  error: ErrorClass;
-  ensName: string;
-  details?: unknown;
-  timestamp: number;
 }
 
 /** Message bootstrap → SW. */

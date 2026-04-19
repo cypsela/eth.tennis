@@ -36,18 +36,6 @@ html, body {
 .line.source-bootstrap { }
 .line.source-sw { }
 
-.retry {
-  margin-top: 24px;
-  padding: 6px 16px;
-  font-family: inherit;
-  font-size: inherit;
-  color: var(--fg);
-  background: transparent;
-  border: 1px solid var(--fg);
-  cursor: pointer;
-}
-.retry:hover { background: rgba(224, 224, 224, 0.1); }
-
 @media (prefers-reduced-motion: reduce) {
   .line { animation: none; }
 }

@@ -1,7 +1,6 @@
 export type {
   BootstrapToSw,
   ErrorClass,
-  GatewayState,
   Glyph,
   LogLevel,
   SwToBootstrap,

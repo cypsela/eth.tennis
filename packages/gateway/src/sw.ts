@@ -1,12 +1,9 @@
 /// <reference lib="webworker" />
 import {
   type ContentFetcher,
-  type GatewayState,
-  httpStatusFor,
   install,
   type RenderErrorArgs,
 } from "@cypsela/gateway-sw-core";
-import { injectState } from "./sw-helpers.ts";
 
 const sw = self as unknown as ServiceWorkerGlobalScope;
 
@@ -38,29 +35,16 @@ sw.addEventListener("activate", (event) => {
   })());
 });
 
-async function renderErrorResponse(args: RenderErrorArgs): Promise<Response> {
+async function renderErrorResponse(_args: RenderErrorArgs): Promise<Response> {
   const cache = await caches.open(CACHE_VERSION);
   const shell = await cache.match("/index.html");
-  const status = httpStatusFor(args.errorClass);
-  const state: GatewayState = {
-    error: args.errorClass,
-    ensName: args.ensName ?? "",
-    details: args.error instanceof Error
-      ? args.error.message
-      : String(args.error),
-    timestamp: Date.now(),
-  };
   if (!shell) {
-    return new Response(JSON.stringify(state), {
-      status,
-      headers: { "content-type": "application/json" },
+    return new Response("bootstrap shell unavailable", {
+      status: 500,
+      headers: { "content-type": "text/plain" },
     });
   }
-  const html = await shell.text();
-  return new Response(injectState(html, state), {
-    status,
-    headers: { "content-type": "text/html; charset=utf-8" },
-  });
+  return shell.clone();
 }
 
 const testContent: ContentFetcher | undefined = TEST_CONTENT_GATEWAY

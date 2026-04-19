@@ -1,26 +1,10 @@
-import type {
-  BootstrapToSw,
-  GatewayState,
-  SwToBootstrap,
-} from "@cypsela/gateway-sw-core";
+import type { BootstrapToSw, SwToBootstrap } from "@cypsela/gateway-sw-core";
 import { makeLogger } from "@cypsela/gateway-sw-core";
 import { Terminal } from "./terminal.ts";
 
-export type Mode =
-  | "cold-start"
-  | "sw-unsupported"
-  | "sw-install-failure"
-  | "content-error";
+export type Mode = "cold-start" | "sw-unsupported";
 
-export interface WindowWithState extends Window {
-  __GATEWAY_STATE__?: GatewayState;
-}
-
-export function detectMode(
-  win: WindowWithState,
-  nav: Navigator = navigator,
-): Mode {
-  if (win.__GATEWAY_STATE__?.error) return "content-error";
+export function detectMode(nav: Navigator = navigator): Mode {
   if (!("serviceWorker" in nav)) return "sw-unsupported";
   return "cold-start";
 }
@@ -54,7 +38,6 @@ async function runColdStart(terminal: Terminal, startedAt: number) {
       `sw-register-failed: ${err instanceof Error ? err.message : String(err)}`,
       "✗",
     );
-    renderRetryButton(() => location.reload());
     return;
   }
   logger.success("registered", "✓");
@@ -69,7 +52,6 @@ async function runColdStart(terminal: Terminal, startedAt: number) {
     await ready;
   } catch {
     logger.error("sw-activation-timeout", "✗");
-    renderRetryButton(() => location.reload());
     return;
   }
   logger.success("ready", "✓");
@@ -111,20 +93,6 @@ async function runColdStart(terminal: Terminal, startedAt: number) {
   }
 }
 
-function renderContentError(terminal: Terminal, startedAt: number) {
-  const state = (window as WindowWithState).__GATEWAY_STATE__!;
-  const logger = makeLogger({
-    source: "sw",
-    startedAt,
-    sink: (e) => terminal.append(e),
-  });
-  logger.error(`${state.error}: ${state.ensName}`, "✗");
-  if (state.details) {
-    logger.info(String(state.details), "↳");
-  }
-  renderRetryButton(() => location.reload());
-}
-
 function renderSwUnsupported(terminal: Terminal, startedAt: number) {
   const logger = makeLogger({
     source: "bootstrap",
@@ -137,34 +105,19 @@ function renderSwUnsupported(terminal: Terminal, startedAt: number) {
   );
 }
 
-function renderRetryButton(onClick: () => void) {
-  const host = document.getElementById("terminal")!;
-  const btn = document.createElement("button");
-  btn.type = "button";
-  btn.className = "retry";
-  btn.textContent = "retry";
-  btn.addEventListener("click", onClick);
-  host.appendChild(btn);
-}
-
 function main() {
   const host = document.getElementById("terminal");
   if (!host) return;
   const terminal = new Terminal(host);
   const startedAt = Date.now();
-  const mode = detectMode(window as WindowWithState);
+  const mode = detectMode();
 
   switch (mode) {
     case "cold-start":
       void runColdStart(terminal, startedAt);
       break;
-    case "content-error":
-      renderContentError(terminal, startedAt);
-      break;
     case "sw-unsupported":
       renderSwUnsupported(terminal, startedAt);
-      break;
-    case "sw-install-failure":
       break;
   }
 }
