@@ -6,17 +6,17 @@ every block against its CID — all through a service worker. The gateway
 operator hosts only a static bootstrap bundle; no request proxying, no
 server-side content retrieval.
 
-## Why not eth.limo?
+## How it differs from eth.limo
 
-[eth.limo](https://eth.limo) is a trusted HTTPS proxy: their servers resolve
-ENS, fetch IPFS content, and serve it to the browser. You trust them not to
-lie about the content.
+[eth.limo](https://eth.limo) is a server-side HTTPS proxy: the operator
+resolves ENS, fetches the IPFS content, and streams it to the browser. The
+content the user sees is whatever the proxy returns.
 
-eth.cypsela flips this. The server-side surface is a static HTML + JS bundle.
-After the service worker activates, the browser does the ENS resolution (via
-Ethereum RPC) and the content retrieval (via `@helia/verified-fetch`). Block
-hashes are verified locally against the ENS-declared contenthash. The gateway
-operator cannot forge content.
+eth.cypsela does the resolution and retrieval in the browser. After the
+service worker activates, the browser queries an Ethereum RPC for the ENS
+contenthash and pulls content through `@helia/verified-fetch`, which
+hash-verifies every block against that contenthash. The server-side surface
+is only a static bootstrap.
 
 In v1 the Ethereum RPC is still a trust anchor for the name → contenthash
 mapping. User-configurable RPC and light-client mode are post-v1 work.
