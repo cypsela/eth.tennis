@@ -8,7 +8,7 @@ export * from "./types.js";
 
 import { createSwrCache } from "./cache.js";
 import { type ContentFetcher, createContentFetcher } from "./content.js";
-import { GatewayError, httpStatusFor } from "./errors.js";
+import { ContentUnreachable, GatewayError, httpStatusFor } from "./errors.js";
 import { createResolver, type EnsResolver } from "./resolver.js";
 import type {
   BootstrapToSw,
@@ -74,6 +74,13 @@ export function install(
         cid: ch.cid,
         path: msg.path,
       });
+      if (!response.ok) {
+        throw new ContentUnreachable(
+          msg.ensName,
+          ch.cid,
+          new Error(`HTTP ${response.status}`),
+        );
+      }
       const cacheKey = `${msg.ensName}${msg.path}`;
       contentCache.set(cacheKey, response.clone());
       log("success", "✓", "done");
@@ -132,6 +139,13 @@ export function install(
           cid: ch.cid,
           path: url.pathname,
         });
+        if (!res.ok) {
+          throw new ContentUnreachable(
+            ensName,
+            ch.cid,
+            new Error(`HTTP ${res.status}`),
+          );
+        }
         contentCache.set(cacheKey, res.clone());
         return res;
       } catch (err) {

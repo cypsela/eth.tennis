@@ -55,6 +55,52 @@ describe("install()", () => {
     expect(resolve).toHaveBeenCalledWith("vitalik.eth");
   });
 
+  test("non-ok fetcher response posts error and skips cache", async () => {
+    const sw = makeFakeSw();
+    const resolve = vi.fn().mockResolvedValue({
+      protocol: "ipfs",
+      cid: "bafy",
+    });
+    const fetch = vi.fn().mockResolvedValue(
+      new Response("unreachable", { status: 504 }),
+    );
+    const render = vi.fn().mockResolvedValue(new Response("shell"));
+    install(
+      sw as any,
+      {
+        gatewayDomain: "gateway.example",
+        rpcUrl: "http://rpc",
+        _resolver: { resolve },
+        _content: { fetch },
+        renderErrorResponse: render,
+      } as any,
+    );
+
+    const msg = sw.listeners.get("message")!;
+    const source = { postMessage: vi.fn() };
+    await msg({
+      data: { type: "resolve-and-fetch", ensName: "x.eth", path: "/" },
+      source,
+    });
+    expect(source.postMessage).toHaveBeenCalledWith(
+      expect.objectContaining({ type: "error", error: "content-unreachable" }),
+    );
+
+    const fetchHandler = sw.listeners.get("fetch")!;
+    let responded: Response | undefined;
+    fetchHandler({
+      request: new Request("https://x.eth.gateway.example/"),
+      respondWith: (p: Promise<Response>) => {
+        void p.then((r) => (responded = r));
+      },
+    });
+    await new Promise((r) => setTimeout(r, 0));
+    expect(render).toHaveBeenCalledWith(
+      expect.objectContaining({ errorClass: "content-unreachable" }),
+    );
+    expect(await responded?.text()).toBe("shell");
+  });
+
   test("renderErrorResponse is invoked on fetch-path failures", async () => {
     const sw = makeFakeSw();
     const resolve = vi.fn().mockRejectedValue(new Error("boom"));
