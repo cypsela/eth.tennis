@@ -61,13 +61,20 @@ sw.addEventListener("fetch", (event) => {
 async function renderBootstrapShell(_args: RenderShellArgs): Promise<Response> {
   const cache = await caches.open(CACHE_VERSION);
   const shell = await cache.match("/index.html");
-  if (!shell) {
-    return new Response("bootstrap shell unavailable", {
-      status: 500,
-      headers: { "content-type": "text/plain" },
-    });
+  if (shell) return shell.clone();
+  try {
+    const fresh = await fetch("/index.html", { cache: "no-store" });
+    if (fresh.ok) {
+      await cache.put("/index.html", fresh.clone());
+      return fresh;
+    }
+  } catch {
+    // fall through to plaintext error
   }
-  return shell.clone();
+  return new Response("bootstrap shell unavailable", {
+    status: 500,
+    headers: { "content-type": "text/plain" },
+  });
 }
 
 const testContent: ContentFetcher | undefined = TEST_CONTENT_GATEWAY

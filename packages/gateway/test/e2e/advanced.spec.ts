@@ -71,6 +71,27 @@ test.describe("advanced paths", () => {
     expect(names).toContain("bootstrap-v1");
   });
 
+  test("bootstrap shell re-fetches when SW cache is empty", async ({ page, context }) => {
+    await page.goto("http://vitalik.eth.localhost:5173/");
+    await page.waitForLoadState("networkidle");
+    await page.waitForFunction(() => !!navigator.serviceWorker.controller);
+
+    await page.evaluate(async () => {
+      const names = await caches.keys();
+      await Promise.all(names.map((n) => caches.delete(n)));
+    });
+
+    await context.route("https://cloudflare-eth.com/**", async (route) => {
+      await route.fulfill({ status: 503 });
+    });
+
+    await page.goto("http://vitalik.eth.localhost:5173/anything");
+    await expect(
+      page.locator(".line.level-error").filter({ hasText: "rpc-down" }),
+    )
+      .toBeVisible({ timeout: 10_000 });
+  });
+
   // Browsers fetch SW registration scripts with skipServiceWorker=true, so
   // the gateway SW's fetch handler never sees content-sw.js registrations.
   // The dev-console warning in gateway-sw-core is kept as forward-compat;
