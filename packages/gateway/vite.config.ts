@@ -1,6 +1,56 @@
 import { build as esbuildBuild } from "esbuild";
+import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { defineConfig, loadEnv, type Plugin } from "vite";
+
+function inlineStyles(): Plugin {
+  const inlined = new Set<string>();
+  return {
+    name: "inline-styles",
+    apply: "build",
+    enforce: "post",
+    generateBundle(_opts, bundle) {
+      const htmlAsset = bundle["index.html"];
+      if (!htmlAsset || htmlAsset.type !== "asset") return;
+      let html = String(htmlAsset.source);
+
+      for (const [fileName, chunk] of Object.entries(bundle)) {
+        if (chunk.type !== "asset" || !fileName.endsWith(".css")) continue;
+        const css = String(chunk.source);
+        const escaped = fileName.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+        const linkPattern = new RegExp(
+          `<link[^>]*href=["']/?${escaped}["'][^>]*>`,
+          "g",
+        );
+        html = html.replace(linkPattern, `<style>${css}</style>`);
+        delete bundle[fileName];
+        inlined.add(fileName);
+      }
+
+      htmlAsset.source = html;
+    },
+    writeBundle(opts) {
+      if (!opts.dir || inlined.size === 0) return;
+      const manifestPath = resolve(opts.dir, ".vite/manifest.json");
+      if (!existsSync(manifestPath)) return;
+      const manifest = JSON.parse(readFileSync(manifestPath, "utf-8")) as Record<
+        string,
+        { css?: string[] }
+      >;
+      let changed = false;
+      for (const entry of Object.values(manifest)) {
+        if (!entry.css) continue;
+        const kept = entry.css.filter((c) => !inlined.has(c));
+        if (kept.length === entry.css.length) continue;
+        changed = true;
+        if (kept.length === 0) delete entry.css;
+        else entry.css = kept;
+      }
+      if (changed) writeFileSync(manifestPath, JSON.stringify(manifest, null, 2));
+      inlined.clear();
+    },
+  };
+}
 
 function serveSwInDev(): Plugin {
   let env: Record<string, string> = {};
@@ -61,7 +111,7 @@ function serveSwInDev(): Plugin {
 }
 
 export default defineConfig({
-  plugins: [serveSwInDev()],
+  plugins: [inlineStyles(), serveSwInDev()],
   build: {
     target: "es2022",
     outDir: "dist",
