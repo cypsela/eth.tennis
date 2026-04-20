@@ -99,9 +99,7 @@ test.describe("advanced paths", () => {
     await page.reload();
     await page.waitForTimeout(3000);
     expect(
-      warnings.some((w) =>
-        w.includes("eth.cypsela detected a SW registration")
-      ),
+      warnings.some((w) => w.includes("eth.tennis detected a SW registration")),
     )
       .toBe(true);
   });

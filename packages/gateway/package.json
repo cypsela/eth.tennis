@@ -1,7 +1,7 @@
 {
   "name": "@cypsela/gateway",
   "version": "0.0.0",
-  "description": "eth.cypsela deployable site (CF Pages)",
+  "description": "eth.tennis deployable site (CF Pages)",
   "type": "module",
   "private": true,
   "license": "AGPL-3.0-only",

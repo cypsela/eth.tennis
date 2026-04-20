@@ -25,7 +25,7 @@ interface InternalOpts extends InstallOpts {
 }
 
 const CONTENT_SW_WARNING =
-  "eth.cypsela detected a SW registration from this ENS site.\n"
+  "eth.tennis detected a SW registration from this ENS site.\n"
   + "If your SW does network-fallbacks, your site may break on this gateway.\n"
   + "Import @cypsela/gateway-sw-core in your SW to retain gateway resolution.";
 

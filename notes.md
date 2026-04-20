@@ -1,11 +1,11 @@
-# eth.cypsela brainstorm notes
+# eth.tennis brainstorm notes
 
 Running log of decisions during brainstorming. Will fold into the design doc later.
 
 ## Decisions so far
 
 - **Repo layout:** standalone repo (not part of frostfire.eth monorepo). Makes it reusable beyond frostfire.
-- **Name:** `eth.cypsela` (local-only for now; remote repo later).
+- **Name:** `eth.tennis` (local-only for now; remote repo later).
 - **URL shape:** `<name>.eth.<GATEWAY_DOMAIN>`, with multi-level wildcards so subnames like `app.vitalik.eth.<GATEWAY_DOMAIN>` work natively. Gateway domain is a placeholder — picked later.
 - **ENS RPC trust model (v1):** hardcoded public RPC (e.g., `cloudflare-eth.com`). Good enough to ship; upgrade path is clear.
 - **Feature scope:** ENS-only. Strip CID-as-subdomain, `/ipfs/` & `/ipns/` path routes, DNSLink from upstream `service-worker-gateway`. Keep verified-fetch core + web-gateway behaviors (`index.html`, `_redirects`, web paths).

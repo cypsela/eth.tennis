@@ -1,4 +1,4 @@
-# eth.cypsela
+# eth.tennis
 
 **Browser-verified ENS gateway.** Visit `<name>.eth.<GATEWAY_DOMAIN>` and the
 browser resolves the ENS name, fetches the IPFS/IPNS contenthash, and verifies
@@ -12,7 +12,7 @@ server-side content retrieval.
 resolves ENS, fetches the IPFS content, and streams it to the browser. The
 content the user sees is whatever the proxy returns.
 
-eth.cypsela does the resolution and retrieval in the browser. After the
+eth.tennis does the resolution and retrieval in the browser. After the
 service worker activates, the browser queries an Ethereum RPC for the ENS
 contenthash and pulls content through `@helia/verified-fetch`, which
 hash-verifies every block against that contenthash. The server-side surface
@@ -61,7 +61,7 @@ pnpm test               # unit tests (vitest) across the workspace
 pnpm ci                 # build + test (what CI runs)
 ```
 
-Try `http://vitalik.eth.cypsela.localhost:5173/` once dev is up — Chromium
+Try `http://vitalik.eth.tennis.localhost:5173/` once dev is up — Chromium
 resolves `*.localhost` to 127.0.0.1 so no hosts-file edits are required.
 
 Per-package scripts live in `packages/*/package.json`. `@cypsela/gateway`
@@ -89,7 +89,7 @@ in [`docs/deploy.md`](docs/deploy.md).
 
 Full design spec — architecture, trust model, failure classes, caching,
 content-SW interop, scope boundaries — in
-[`docs/superpowers/specs/2026-04-17-eth-cypsela-design.md`](docs/superpowers/specs/2026-04-17-eth-cypsela-design.md).
+[`docs/superpowers/specs/2026-04-17-eth-tennis-design.md`](docs/superpowers/specs/2026-04-17-eth-tennis-design.md).
 
 ## Status
 

@@ -25,7 +25,7 @@ async function runColdStart(terminal: Terminal, startedAt: number) {
     sink: (e) => terminal.append(e),
   });
 
-  logger.info("starting eth.cypsela", ">");
+  logger.info("starting eth.tennis", ">");
   logger.info("registering service worker", ">");
 
   try {

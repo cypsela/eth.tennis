@@ -1,7 +1,7 @@
 {
   "name": "@cypsela/gateway-sw-core",
   "version": "0.0.0",
-  "description": "ENS + verified-fetch service worker primitives for the eth.cypsela gateway",
+  "description": "ENS + verified-fetch service worker primitives for the eth.tennis gateway",
   "type": "module",
   "exports": {
     ".": {
