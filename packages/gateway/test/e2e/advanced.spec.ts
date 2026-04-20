@@ -43,6 +43,34 @@ test.describe("advanced paths", () => {
     expect(after).toBe(before);
   });
 
+  test("activate prunes stale bootstrap-* caches, leaves unrelated caches", async ({ page }) => {
+    await page.goto("http://vitalik.eth.localhost:5173/");
+    await page.waitForLoadState("networkidle");
+    await page.waitForFunction(() => !!navigator.serviceWorker.controller);
+
+    await page.evaluate(async () => {
+      await caches.open("bootstrap-v-stale");
+      await caches.open("unrelated-cache");
+    });
+
+    await page.evaluate(async () => {
+      const regs = await navigator.serviceWorker.getRegistrations();
+      await Promise.all(regs.map((r) => r.unregister()));
+    });
+
+    await page.reload();
+    await page.waitForLoadState("networkidle");
+    await page.waitForFunction(() => !!navigator.serviceWorker.controller);
+    await page.waitForFunction(async () =>
+      !(await caches.keys()).includes("bootstrap-v-stale")
+    );
+
+    const names = await page.evaluate(() => caches.keys());
+    expect(names).not.toContain("bootstrap-v-stale");
+    expect(names).toContain("unrelated-cache");
+    expect(names).toContain("bootstrap-v1");
+  });
+
   // Browsers fetch SW registration scripts with skipServiceWorker=true, so
   // the gateway SW's fetch handler never sees content-sw.js registrations.
   // The dev-console warning in gateway-sw-core is kept as forward-compat;
