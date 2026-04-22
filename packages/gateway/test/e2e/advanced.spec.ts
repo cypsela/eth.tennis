@@ -21,13 +21,13 @@ test.describe("advanced paths", () => {
   });
 
   test("ENSIP-10 wildcard subname resolves", async ({ page }) => {
-    await page.goto("http://app.vitalik.eth.localhost:5173/");
+    await page.goto("http://app.vitalik.eth.tennis.localhost:5173/");
     await page.waitForLoadState("networkidle");
     await expect(page.locator("h1")).toHaveText("app");
   });
 
   test("SW update on redeploy picks up new version", async ({ page }) => {
-    await page.goto("http://vitalik.eth.localhost:5173/");
+    await page.goto("http://vitalik.eth.tennis.localhost:5173/");
     await page.waitForLoadState("networkidle");
     await page.waitForFunction(() => !!navigator.serviceWorker.controller);
     const before = await page.evaluate(() =>
@@ -44,7 +44,7 @@ test.describe("advanced paths", () => {
   });
 
   test("activate prunes stale bootstrap-* caches, leaves unrelated caches", async ({ page }) => {
-    await page.goto("http://vitalik.eth.localhost:5173/");
+    await page.goto("http://vitalik.eth.tennis.localhost:5173/");
     await page.waitForLoadState("networkidle");
     await page.waitForFunction(() => !!navigator.serviceWorker.controller);
 
@@ -72,7 +72,7 @@ test.describe("advanced paths", () => {
   });
 
   test("bootstrap shell re-fetches when SW cache is empty", async ({ page, context }) => {
-    await page.goto("http://vitalik.eth.localhost:5173/");
+    await page.goto("http://vitalik.eth.tennis.localhost:5173/");
     await page.waitForLoadState("networkidle");
     await page.waitForFunction(() => !!navigator.serviceWorker.controller);
 
@@ -85,7 +85,7 @@ test.describe("advanced paths", () => {
       await route.fulfill({ status: 503 });
     });
 
-    await page.goto("http://vitalik.eth.localhost:5173/anything");
+    await page.goto("http://vitalik.eth.tennis.localhost:5173/anything");
     await expect(
       page.locator(".line.level-error").filter({ hasText: "rpc-down" }),
     )
@@ -114,7 +114,7 @@ test.describe("advanced paths", () => {
         });
       },
     );
-    await page.goto("http://vitalik.eth.localhost:5173/");
+    await page.goto("http://vitalik.eth.tennis.localhost:5173/");
     await page.waitForLoadState("networkidle");
     await page.waitForFunction(() => !!navigator.serviceWorker.controller);
     await page.reload();

@@ -6,7 +6,7 @@ export default defineConfig({
   retries: 0,
   workers: 1,
   use: {
-    baseURL: "http://vitalik.eth.localhost:5173",
+    baseURL: "http://vitalik.eth.tennis.localhost:5173",
     trace: "retain-on-failure",
   },
   projects: [
@@ -18,6 +18,7 @@ export default defineConfig({
     reuseExistingServer: !process.env["CI"],
     timeout: 30_000,
     env: {
+      VITE_RPC_URL: "https://cloudflare-eth.com",
       VITE_TEST_CONTENT_GATEWAY: "https://test-gateway.local",
     },
   },

@@ -18,20 +18,21 @@ test.use({
 });
 
 test("cold first visit renders the site", async ({ page }) => {
-  await page.goto("http://vitalik.eth.localhost:5173/");
+  const logs: string[] = [];
+  page.on("console", (msg) => logs.push(msg.text()));
+  await page.goto("http://vitalik.eth.tennis.localhost:5173/");
   await expect(
     page.locator(".line").filter({ hasText: "registering service worker" }),
   )
     .toBeVisible();
-  await expect(page.locator(".line").filter({ hasText: "contenthash: ipfs" }))
-    .toBeVisible({ timeout: 10_000 });
   await page.waitForLoadState("networkidle");
   await expect(page.locator("h1")).toHaveText("hello vitalik");
+  expect(logs.some((l) => l.includes("contenthash: ipfs"))).toBe(true);
 });
 
 test("warm subsequent visit skips the terminal", async ({ page }) => {
-  await page.goto("http://vitalik.eth.localhost:5173/");
+  await page.goto("http://vitalik.eth.tennis.localhost:5173/");
   await page.waitForLoadState("networkidle");
-  await page.goto("http://vitalik.eth.localhost:5173/other");
+  await page.goto("http://vitalik.eth.tennis.localhost:5173/other");
   await expect(page.locator(".line")).toHaveCount(0);
 });

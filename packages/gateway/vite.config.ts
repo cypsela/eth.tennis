@@ -44,16 +44,16 @@ function serveSwInDev(): Plugin {
             conditions: ["browser", "import", "module"],
             define: {
               "import.meta.env.VITE_GATEWAY_DOMAIN": JSON.stringify(
-                env["VITE_GATEWAY_DOMAIN"] ?? process.env["VITE_GATEWAY_DOMAIN"]
+                process.env["VITE_GATEWAY_DOMAIN"] ?? env["VITE_GATEWAY_DOMAIN"]
                   ?? "localhost",
               ),
               "import.meta.env.VITE_RPC_URL": JSON.stringify(
-                env["VITE_RPC_URL"] ?? process.env["VITE_RPC_URL"]
+                process.env["VITE_RPC_URL"] ?? env["VITE_RPC_URL"]
                   ?? "https://cloudflare-eth.com",
               ),
               "import.meta.env.VITE_TEST_CONTENT_GATEWAY": JSON.stringify(
-                env["VITE_TEST_CONTENT_GATEWAY"]
-                  ?? process.env["VITE_TEST_CONTENT_GATEWAY"] ?? "",
+                process.env["VITE_TEST_CONTENT_GATEWAY"]
+                  ?? env["VITE_TEST_CONTENT_GATEWAY"] ?? "",
               ),
               "process.env.NODE_ENV": JSON.stringify("development"),
               "__SHELL_ASSETS__": JSON.stringify([]),

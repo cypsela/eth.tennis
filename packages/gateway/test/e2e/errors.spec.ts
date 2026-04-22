@@ -8,7 +8,7 @@ test.describe("error paths", () => {
   test.use({ rpc: {}, ipfs: {} });
 
   test("ens-not-found shows branded terminal with error line", async ({ page }) => {
-    await page.goto("http://ghost.eth.localhost:5173/");
+    await page.goto("http://ghost.eth.tennis.localhost:5173/");
     await expect(
       page.locator(".line.level-error").filter({ hasText: "ens-not-found" }),
     )
@@ -29,7 +29,7 @@ test.describe("error paths", () => {
         body: JSON.stringify({ jsonrpc: "2.0", id, result }),
       });
     });
-    await page.goto("http://empty.eth.localhost:5173/");
+    await page.goto("http://empty.eth.tennis.localhost:5173/");
     await expect(
       page.locator(".line.level-error").filter({ hasText: "ens-not-found" }).or(
         page.locator(".line.level-error").filter({ hasText: "no-contenthash" }),
@@ -64,7 +64,7 @@ test.describe("error paths", () => {
         body: JSON.stringify({ jsonrpc: "2.0", id, result: "0x1" }),
       });
     });
-    await page.goto("http://weird.eth.localhost:5173/");
+    await page.goto("http://weird.eth.tennis.localhost:5173/");
     await expect(
       page.locator(".line.level-error").filter({
         hasText: "unsupported-protocol",
@@ -77,7 +77,7 @@ test.describe("error paths", () => {
     await context.route("https://cloudflare-eth.com/**", async (route) => {
       await route.fulfill({ status: 503 });
     });
-    await page.goto("http://vitalik.eth.localhost:5173/");
+    await page.goto("http://vitalik.eth.tennis.localhost:5173/");
     await expect(
       page.locator(".line.level-error").filter({ hasText: "rpc-down" }),
     )
