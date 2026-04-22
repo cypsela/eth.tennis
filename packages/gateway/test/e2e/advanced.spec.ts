@@ -119,9 +119,8 @@ test.describe("advanced paths", () => {
     await page.waitForFunction(() => !!navigator.serviceWorker.controller);
     await page.reload();
     await page.waitForTimeout(3000);
-    expect(
-      warnings.some((w) => w.includes("eth.tennis detected a SW registration")),
-    )
-      .toBe(true);
+    expect(warnings.some((w) => w.includes("detected a SW registration"))).toBe(
+      true,
+    );
   });
 });

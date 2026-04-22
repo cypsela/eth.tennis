@@ -44,7 +44,7 @@ describe("install()", () => {
     install(
       sw as any,
       {
-        gatewayDomain: "gateway.example",
+        gatewayDomain: "eth.gateway.example",
         rpcUrl: "http://rpc",
         _resolver: { resolve: vi.fn() },
         _content: { fetch: vi.fn() },
@@ -64,7 +64,7 @@ describe("install()", () => {
     install(
       sw as any,
       {
-        gatewayDomain: "gateway.example",
+        gatewayDomain: "eth.gateway.example",
         rpcUrl: "http://rpc",
         _resolver: { resolve },
         _content: { fetch },
@@ -92,7 +92,7 @@ describe("install()", () => {
     install(
       sw as any,
       {
-        gatewayDomain: "gateway.example",
+        gatewayDomain: "eth.gateway.example",
         rpcUrl: "http://rpc",
         _resolver: { resolve },
         _content: { fetch },
@@ -118,7 +118,7 @@ describe("install()", () => {
     install(
       sw as any,
       {
-        gatewayDomain: "gateway.example",
+        gatewayDomain: "eth.gateway.example",
         rpcUrl: "http://rpc",
         _resolver: { resolve },
         _content: { fetch },
@@ -144,7 +144,7 @@ describe("install()", () => {
     install(
       sw as any,
       {
-        gatewayDomain: "gateway.example",
+        gatewayDomain: "eth.gateway.example",
         rpcUrl: "http://rpc",
         _resolver: { resolve: vi.fn() },
         _content: { fetch: vi.fn() },
@@ -173,7 +173,7 @@ describe("install()", () => {
     install(
       sw as any,
       {
-        gatewayDomain: "gateway.example",
+        gatewayDomain: "eth.gateway.example",
         rpcUrl: "http://rpc",
         _resolver: { resolve },
         _content: { fetch },
@@ -200,7 +200,7 @@ describe("install()", () => {
     install(
       sw as any,
       {
-        gatewayDomain: "gateway.example",
+        gatewayDomain: "eth.gateway.example",
         rpcUrl: "http://rpc",
         _resolver: { resolve },
         _content: { fetch: vi.fn() },
@@ -234,7 +234,7 @@ describe("install()", () => {
     install(
       sw as any,
       {
-        gatewayDomain: "gateway.example",
+        gatewayDomain: "eth.gateway.example",
         rpcUrl: "http://rpc",
         _resolver: { resolve },
         _content: { fetch },
@@ -263,7 +263,7 @@ describe("install()", () => {
     install(
       sw as any,
       {
-        gatewayDomain: "gateway.example",
+        gatewayDomain: "eth.gateway.example",
         rpcUrl: "http://rpc",
         _resolver: { resolve },
         _content: { fetch },
@@ -293,7 +293,7 @@ describe("install()", () => {
     install(
       sw as any,
       {
-        gatewayDomain: "gateway.example",
+        gatewayDomain: "eth.gateway.example",
         rpcUrl: "http://rpc",
         _resolver: { resolve },
         _content: { fetch },
@@ -329,7 +329,7 @@ describe("install()", () => {
     install(
       sw as any,
       {
-        gatewayDomain: "gateway.example",
+        gatewayDomain: "eth.gateway.example",
         rpcUrl: "http://rpc",
         _resolver: { resolve },
         _content: { fetch },

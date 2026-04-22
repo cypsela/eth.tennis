@@ -24,11 +24,6 @@ interface InternalOpts extends InstallOpts {
   _content?: ContentFetcher;
 }
 
-const CONTENT_SW_WARNING =
-  "eth.tennis detected a SW registration from this ENS site.\n"
-  + "If your SW does network-fallbacks, your site may break on this gateway.\n"
-  + "Import @cypsela/gateway-sw-core in your SW to retain gateway resolution.";
-
 export function install(
   scope: ServiceWorkerGlobalScope,
   opts: InternalOpts,
@@ -45,9 +40,16 @@ export function install(
   });
   const contentCache = new Map<string, Response>();
 
+  const contentSwWarning =
+    `${opts.gatewayDomain} detected a SW registration from this ENS site.\n`
+    + "If your SW does network-fallbacks, your site may break on this gateway.\n"
+    + "Import @cypsela/gateway-sw-core in your SW to retain gateway resolution.";
+
   const extractEnsName = (host: string): string | null => {
     const suffix = `.${opts.gatewayDomain}`;
-    return host.endsWith(suffix) ? host.slice(0, -suffix.length) : null;
+    if (!host.endsWith(suffix)) return null;
+    const bare = host.slice(0, -suffix.length);
+    return bare ? `${bare}.eth` : null;
   };
 
   scope.addEventListener("message", async (event: ExtendableMessageEvent) => {
@@ -149,7 +151,7 @@ export function install(
 
   scope.addEventListener("fetch", (event: FetchEvent) => {
     if ((event.request.destination as string) === "serviceworker") {
-      console.warn(CONTENT_SW_WARNING);
+      console.warn(contentSwWarning);
       void (async () => {
         const clients = await scope.clients.matchAll({
           includeUncontrolled: true,
@@ -161,7 +163,7 @@ export function install(
               source: "sw",
               level: "warn",
               glyph: "⚠",
-              text: CONTENT_SW_WARNING,
+              text: contentSwWarning,
             } satisfies SwToBootstrap,
           );
         }

@@ -11,9 +11,10 @@ export function detectMode(nav: Navigator = navigator): Mode {
 
 function ensNameFromHost(hostname: string, gatewayDomain: string): string {
   const suffix = `.${gatewayDomain}`;
-  return hostname.endsWith(suffix)
+  const bare = hostname.endsWith(suffix)
     ? hostname.slice(0, -suffix.length)
     : hostname;
+  return `${bare}.eth`;
 }
 
 const GATEWAY_DOMAIN = import.meta.env.VITE_GATEWAY_DOMAIN ?? "gateway.example";
