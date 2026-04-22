@@ -42,10 +42,10 @@ status.
 
 ## Packages
 
-| Path                          | Package                    | License       | Purpose                                                                    |
-| ----------------------------- | -------------------------- | ------------- | -------------------------------------------------------------------------- |
-| `packages/gateway-sw-core`    | `@cypsela/gateway-sw-core` | MIT           | Reusable SW primitives: ENS resolution, verified-fetch dispatch, errors.   |
-| `packages/gateway`            | `@cypsela/gateway`         | AGPL-3.0-only | Deployable site (bootstrap + SW entrypoint). Private; not published.       |
+| Path                       | Package                    | License       | Purpose                                                                  |
+| -------------------------- | -------------------------- | ------------- | ------------------------------------------------------------------------ |
+| `packages/gateway-sw-core` | `@cypsela/gateway-sw-core` | MIT           | Reusable SW primitives: ENS resolution, verified-fetch dispatch, errors. |
+| `packages/gateway`         | `@cypsela/gateway`         | AGPL-3.0-only | Deployable site (bootstrap + SW entrypoint). Private; not published.     |
 
 Content authors who want to run their own SW without losing gateway
 resolution can `import { install } from '@cypsela/gateway-sw-core'` and
@@ -71,10 +71,10 @@ also exposes `pnpm --filter @cypsela/gateway test:e2e` for Playwright.
 
 Read by `@cypsela/gateway` at build and dev time:
 
-| Name                  | Default                      | Purpose                                                                   |
-| --------------------- | ---------------------------- | ------------------------------------------------------------------------- |
-| `VITE_GATEWAY_DOMAIN` | `gateway.example`            | Suffix the SW strips from `location.hostname` to extract the ENS name.    |
-| `VITE_RPC_URL`        | `https://cloudflare-eth.com` | Ethereum RPC endpoint for ENS reads.                                      |
+| Name                  | Default                      | Purpose                                                                |
+| --------------------- | ---------------------------- | ---------------------------------------------------------------------- |
+| `VITE_GATEWAY_DOMAIN` | `gateway.example`            | Suffix the SW strips from `location.hostname` to extract the ENS name. |
+| `VITE_RPC_URL`        | `https://cloudflare-eth.com` | Ethereum RPC endpoint for ENS reads.                                   |
 
 Local defaults live in `packages/gateway/.env.development`; a template is at
 `packages/gateway/.env.example`.
