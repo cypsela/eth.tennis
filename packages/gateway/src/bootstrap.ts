@@ -33,6 +33,7 @@ async function runColdStart(terminal: Terminal, startedAt: number) {
     await navigator.serviceWorker.register("/gw-sw.js", {
       scope: "/",
       type: "module",
+      updateViaCache: "none",
     });
   } catch (err) {
     logger.error(
