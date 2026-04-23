@@ -183,8 +183,13 @@ export function install(
     }
 
     if (event.request.mode === "navigate") {
-      const site = event.request.headers.get("sec-fetch-site");
-      const inSite = site === "same-origin" || site === "same-site";
+      const referrer = event.request.referrer;
+      let inSite = false;
+      if (referrer) {
+        try {
+          inSite = new URL(referrer).origin === scope.location.origin;
+        } catch {}
+      }
       if (!inSite) {
         event.respondWith(Promise.resolve(renderShell(event.request, ensName)));
         return;

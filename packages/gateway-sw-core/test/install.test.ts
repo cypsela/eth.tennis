@@ -13,11 +13,18 @@ function makeFakeSw() {
   };
 }
 
-function navRequest(url: string, site: string | null = "none") {
-  const headers = new Headers();
-  if (site !== null) headers.set("sec-fetch-site", site);
-  return { url, mode: "navigate", headers, destination: "document" } as any;
+function navRequest(url: string, referrer = "") {
+  return {
+    url,
+    mode: "navigate",
+    headers: new Headers(),
+    destination: "document",
+    referrer,
+  } as any;
 }
+
+const SELF = "https://vitalik.eth.gateway.example/";
+const EXTERNAL = "https://external.example/";
 
 function subRequest(url: string, destination = "script") {
   return { url, mode: "no-cors", headers: new Headers(), destination } as any;
@@ -110,7 +117,7 @@ describe("install()", () => {
     );
   });
 
-  test("fetch handler: navigation + fresh entry (sec-fetch-site=none) serves shell without resolve+fetch", async () => {
+  test("fetch handler: navigation + fresh entry (no referrer) serves shell without resolve+fetch", async () => {
     const sw = makeFakeSw();
     const resolve = vi.fn();
     const fetch = vi.fn();
@@ -128,7 +135,7 @@ describe("install()", () => {
 
     const res = await invoke(
       sw.listeners.get("fetch")!,
-      navRequest("https://x.eth.gateway.example/", "none"),
+      navRequest("https://x.eth.gateway.example/"),
     );
     expect(render).toHaveBeenCalledWith(
       expect.objectContaining({ ensName: "x.eth" }),
@@ -154,7 +161,7 @@ describe("install()", () => {
 
     const res = await invoke(
       sw.listeners.get("fetch")!,
-      navRequest("https://x.eth.gateway.example/about", "cross-site"),
+      navRequest("https://x.eth.gateway.example/about", EXTERNAL),
     );
     expect(render).toHaveBeenCalled();
     expect(await res?.text()).toBe("shell");
@@ -183,7 +190,7 @@ describe("install()", () => {
 
     const res = await invoke(
       sw.listeners.get("fetch")!,
-      navRequest("https://x.eth.gateway.example/about", "same-origin"),
+      navRequest("https://x.eth.gateway.example/about", SELF),
     );
     expect(resolve).toHaveBeenCalled();
     expect(fetch).toHaveBeenCalledWith(
@@ -210,7 +217,7 @@ describe("install()", () => {
 
     const res = await invoke(
       sw.listeners.get("fetch")!,
-      navRequest("https://x.eth.gateway.example/about", "same-origin"),
+      navRequest("https://x.eth.gateway.example/about", SELF),
     );
     expect(render).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -244,7 +251,7 @@ describe("install()", () => {
 
     const res = await invoke(
       sw.listeners.get("fetch")!,
-      navRequest("https://x.eth.gateway.example/about", "same-origin"),
+      navRequest("https://x.eth.gateway.example/about", SELF),
     );
     expect(render).toHaveBeenCalled();
     expect(await res?.text()).toBe("shell");
@@ -339,13 +346,13 @@ describe("install()", () => {
 
     const first = await invoke(
       sw.listeners.get("fetch")!,
-      navRequest("https://x.eth.gateway.example/about", "same-origin"),
+      navRequest("https://x.eth.gateway.example/about", SELF),
     );
     expect(await first?.text()).toBe("page");
 
     const second = await invoke(
       sw.listeners.get("fetch")!,
-      navRequest("https://x.eth.gateway.example/about", "none"),
+      navRequest("https://x.eth.gateway.example/about"),
     );
     expect(await second?.text()).toBe("page");
     expect(fetch).toHaveBeenCalledTimes(1);
