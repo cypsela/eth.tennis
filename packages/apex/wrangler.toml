@@ -1,0 +1,9 @@
+name = "eth-tennis-apex"
+compatibility_date = "2026-04-23"
+
+[assets]
+directory = "./public"
+
+[[routes]]
+pattern = "eth.tennis/*"
+zone_name = "eth.tennis"
