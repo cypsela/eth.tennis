@@ -88,6 +88,7 @@ export function install(
       log("success", "✓", "done");
       post({ type: "done" });
     } catch (err) {
+      console.error(err);
       const errClass = err instanceof GatewayError
         ? err.errorClass
         : "content-unreachable";
@@ -194,6 +195,7 @@ export function install(
           contentCache.set(cacheKey, res.clone());
           return res;
         } catch (err) {
+          console.error(err);
           return renderShell(event.request, ensName, err);
         }
       })());
@@ -218,6 +220,7 @@ export function install(
         }
         return res;
       } catch (err) {
+        console.error(err);
         const status = err instanceof GatewayError
           ? httpStatusFor(err.errorClass)
           : 500;
