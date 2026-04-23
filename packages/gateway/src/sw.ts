@@ -25,7 +25,7 @@ const TEST_CONTENT_GATEWAY = import.meta.env.VITE_TEST_CONTENT_GATEWAY;
 
 const SHELL_ASSETS = __SHELL_ASSETS__;
 const BYPASS_PREFIXES = __BYPASS_PREFIXES__;
-const PRECACHE = ["/", "/index.html", ...SHELL_ASSETS];
+const PRECACHE = ["/", ...SHELL_ASSETS];
 const BYPASS_PATHS = new Set<string>(SHELL_ASSETS);
 
 function shouldBypass(pathname: string): boolean {
@@ -68,12 +68,12 @@ sw.addEventListener("fetch", (event) => {
 
 async function renderBootstrapShell(_args: RenderShellArgs): Promise<Response> {
   const cache = await caches.open(CACHE_VERSION);
-  const shell = await cache.match("/index.html");
+  const shell = await cache.match("/");
   if (shell) return shell.clone();
   try {
-    const fresh = await fetch("/index.html", { cache: "no-store" });
+    const fresh = await fetch("/", { cache: "no-store" });
     if (fresh.ok) {
-      await cache.put("/index.html", fresh.clone());
+      await cache.put("/", fresh.clone());
       return fresh;
     }
   } catch {
