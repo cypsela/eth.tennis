@@ -28,13 +28,13 @@ test.describe("advanced paths", () => {
 
   test("SW update on redeploy picks up new version", async ({ page }) => {
     await page.goto("http://vitalik.eth.tennis.localhost:5173/");
-    await page.waitForLoadState("networkidle");
+    await expect(page.locator("h1")).toHaveText("vitalik");
     await page.waitForFunction(() => !!navigator.serviceWorker.controller);
     const before = await page.evaluate(() =>
       navigator.serviceWorker.controller?.scriptURL
     );
     await page.reload();
-    await page.waitForLoadState("networkidle");
+    await expect(page.locator("h1")).toHaveText("vitalik");
     await page.waitForFunction(() => !!navigator.serviceWorker.controller);
     const after = await page.evaluate(() =>
       navigator.serviceWorker.controller?.scriptURL
@@ -69,27 +69,6 @@ test.describe("advanced paths", () => {
     expect(names).not.toContain("bootstrap-v-stale");
     expect(names).toContain("unrelated-cache");
     expect(names).toContain("bootstrap-v1");
-  });
-
-  test("bootstrap shell re-fetches when SW cache is empty", async ({ page, context }) => {
-    await page.goto("http://vitalik.eth.tennis.localhost:5173/");
-    await page.waitForLoadState("networkidle");
-    await page.waitForFunction(() => !!navigator.serviceWorker.controller);
-
-    await page.evaluate(async () => {
-      const names = await caches.keys();
-      await Promise.all(names.map((n) => caches.delete(n)));
-    });
-
-    await context.route("https://cloudflare-eth.com/**", async (route) => {
-      await route.fulfill({ status: 503 });
-    });
-
-    await page.goto("http://vitalik.eth.tennis.localhost:5173/anything");
-    await expect(
-      page.locator(".line.level-error").filter({ hasText: "rpc-down" }),
-    )
-      .toBeVisible({ timeout: 10_000 });
   });
 
   // Browsers fetch SW registration scripts with skipServiceWorker=true, so

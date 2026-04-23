@@ -13,18 +13,14 @@ function makeFakeSw() {
   };
 }
 
-function navRequest(url: string, referrer = "") {
+function navRequest(url: string) {
   return {
     url,
     mode: "navigate",
     headers: new Headers(),
     destination: "document",
-    referrer,
   } as any;
 }
-
-const SELF = "https://vitalik.eth.gateway.example/";
-const EXTERNAL = "https://external.example/";
 
 function subRequest(url: string, destination = "script") {
   return { url, mode: "no-cors", headers: new Headers(), destination } as any;
@@ -117,57 +113,7 @@ describe("install()", () => {
     );
   });
 
-  test("fetch handler: navigation + fresh entry (no referrer) serves shell without resolve+fetch", async () => {
-    const sw = makeFakeSw();
-    const resolve = vi.fn();
-    const fetch = vi.fn();
-    const render = vi.fn().mockResolvedValue(new Response("shell"));
-    install(
-      sw as any,
-      {
-        gatewayDomain: "eth.gateway.example",
-        rpcUrls: ["http://rpc"],
-        _resolver: { resolve },
-        _content: { fetch },
-        renderBootstrapShell: render,
-      } as any,
-    );
-
-    const res = await invoke(
-      sw.listeners.get("fetch")!,
-      navRequest("https://x.eth.gateway.example/"),
-    );
-    expect(render).toHaveBeenCalledWith(
-      expect.objectContaining({ ensName: "x.eth" }),
-    );
-    expect(resolve).not.toHaveBeenCalled();
-    expect(fetch).not.toHaveBeenCalled();
-    expect(await res?.text()).toBe("shell");
-  });
-
-  test("fetch handler: navigation + cross-site serves shell", async () => {
-    const sw = makeFakeSw();
-    const render = vi.fn().mockResolvedValue(new Response("shell"));
-    install(
-      sw as any,
-      {
-        gatewayDomain: "eth.gateway.example",
-        rpcUrls: ["http://rpc"],
-        _resolver: { resolve: vi.fn() },
-        _content: { fetch: vi.fn() },
-        renderBootstrapShell: render,
-      } as any,
-    );
-
-    const res = await invoke(
-      sw.listeners.get("fetch")!,
-      navRequest("https://x.eth.gateway.example/about", EXTERNAL),
-    );
-    expect(render).toHaveBeenCalled();
-    expect(await res?.text()).toBe("shell");
-  });
-
-  test("fetch handler: navigation + same-origin resolves and returns content (no shell)", async () => {
+  test("fetch handler: navigation resolves and returns content", async () => {
     const sw = makeFakeSw();
     const resolve = vi.fn().mockResolvedValue({
       protocol: "ipfs",
@@ -176,7 +122,6 @@ describe("install()", () => {
     const fetch = vi.fn().mockResolvedValue(
       new Response("page", { status: 200 }),
     );
-    const render = vi.fn();
     install(
       sw as any,
       {
@@ -184,80 +129,21 @@ describe("install()", () => {
         rpcUrls: ["http://rpc"],
         _resolver: { resolve },
         _content: { fetch },
-        renderBootstrapShell: render,
       } as any,
     );
 
     const res = await invoke(
       sw.listeners.get("fetch")!,
-      navRequest("https://x.eth.gateway.example/about", SELF),
+      navRequest("https://x.eth.gateway.example/about"),
     );
     expect(resolve).toHaveBeenCalled();
     expect(fetch).toHaveBeenCalledWith(
       expect.objectContaining({ path: "/about" }),
     );
-    expect(render).not.toHaveBeenCalled();
     expect(await res?.text()).toBe("page");
   });
 
-  test("fetch handler: navigation + same-origin + resolver throws falls back to shell", async () => {
-    const sw = makeFakeSw();
-    const resolve = vi.fn().mockRejectedValue(new Error("boom"));
-    const render = vi.fn().mockResolvedValue(new Response("shell"));
-    install(
-      sw as any,
-      {
-        gatewayDomain: "eth.gateway.example",
-        rpcUrls: ["http://rpc"],
-        _resolver: { resolve },
-        _content: { fetch: vi.fn() },
-        renderBootstrapShell: render,
-      } as any,
-    );
-
-    const res = await invoke(
-      sw.listeners.get("fetch")!,
-      navRequest("https://x.eth.gateway.example/about", SELF),
-    );
-    expect(render).toHaveBeenCalledWith(
-      expect.objectContaining({
-        ensName: "x.eth",
-        errorClass: "content-unreachable",
-      }),
-    );
-    expect(await res?.text()).toBe("shell");
-  });
-
-  test("fetch handler: navigation + same-origin + non-ok fetcher response falls back to shell", async () => {
-    const sw = makeFakeSw();
-    const resolve = vi.fn().mockResolvedValue({
-      protocol: "ipfs",
-      cid: "bafy",
-    });
-    const fetch = vi.fn().mockResolvedValue(
-      new Response("gone", { status: 504 }),
-    );
-    const render = vi.fn().mockResolvedValue(new Response("shell"));
-    install(
-      sw as any,
-      {
-        gatewayDomain: "eth.gateway.example",
-        rpcUrls: ["http://rpc"],
-        _resolver: { resolve },
-        _content: { fetch },
-        renderBootstrapShell: render,
-      } as any,
-    );
-
-    const res = await invoke(
-      sw.listeners.get("fetch")!,
-      navRequest("https://x.eth.gateway.example/about", SELF),
-    );
-    expect(render).toHaveBeenCalled();
-    expect(await res?.text()).toBe("shell");
-  });
-
-  test("fetch handler: subresource returns fetcher response as-is (never shell)", async () => {
+  test("fetch handler: subresource returns fetcher response as-is", async () => {
     const sw = makeFakeSw();
     const resolve = vi.fn().mockResolvedValue({
       protocol: "ipfs",
@@ -266,7 +152,6 @@ describe("install()", () => {
     const fetch = vi.fn().mockResolvedValue(
       new Response("js", { status: 200 }),
     );
-    const render = vi.fn();
     install(
       sw as any,
       {
@@ -274,7 +159,6 @@ describe("install()", () => {
         rpcUrls: ["http://rpc"],
         _resolver: { resolve },
         _content: { fetch },
-        renderBootstrapShell: render,
       } as any,
     );
 
@@ -282,7 +166,6 @@ describe("install()", () => {
       sw.listeners.get("fetch")!,
       subRequest("https://x.eth.gateway.example/app.js", "script"),
     );
-    expect(render).not.toHaveBeenCalled();
     expect(await res?.text()).toBe("js");
   });
 
@@ -296,7 +179,6 @@ describe("install()", () => {
       .fn()
       .mockResolvedValueOnce(new Response("missing", { status: 404 }))
       .mockResolvedValueOnce(new Response("missing", { status: 404 }));
-    const render = vi.fn();
     install(
       sw as any,
       {
@@ -304,7 +186,6 @@ describe("install()", () => {
         rpcUrls: ["http://rpc"],
         _resolver: { resolve },
         _content: { fetch },
-        renderBootstrapShell: render,
       } as any,
     );
 
@@ -319,11 +200,10 @@ describe("install()", () => {
       subRequest("https://x.eth.gateway.example/missing.png", "image"),
     );
     expect(second?.status).toBe(404);
-    expect(render).not.toHaveBeenCalled();
     expect(fetch).toHaveBeenCalledTimes(2);
   });
 
-  test("fetch handler: cached response is served directly (no resolve+fetch, no shell)", async () => {
+  test("fetch handler: cached response is served directly (no resolve+fetch)", async () => {
     const sw = makeFakeSw();
     const resolve = vi.fn().mockResolvedValue({
       protocol: "ipfs",
@@ -332,7 +212,6 @@ describe("install()", () => {
     const fetch = vi.fn().mockResolvedValue(
       new Response("page", { status: 200 }),
     );
-    const render = vi.fn();
     install(
       sw as any,
       {
@@ -340,13 +219,12 @@ describe("install()", () => {
         rpcUrls: ["http://rpc"],
         _resolver: { resolve },
         _content: { fetch },
-        renderBootstrapShell: render,
       } as any,
     );
 
     const first = await invoke(
       sw.listeners.get("fetch")!,
-      navRequest("https://x.eth.gateway.example/about", SELF),
+      navRequest("https://x.eth.gateway.example/about"),
     );
     expect(await first?.text()).toBe("page");
 
@@ -356,6 +234,5 @@ describe("install()", () => {
     );
     expect(await second?.text()).toBe("page");
     expect(fetch).toHaveBeenCalledTimes(1);
-    expect(render).not.toHaveBeenCalled();
   });
 });

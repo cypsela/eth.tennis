@@ -32,18 +32,6 @@ export interface ResolverOpts {
   rpcUrls: string[];
 }
 
-/** Arguments passed to a bootstrap-shell renderer. */
-export interface RenderShellArgs {
-  /** Original navigation request. */
-  request: Request;
-  /** Resolved ENS name extracted from the hostname, or null if extraction failed. */
-  ensName: string | null;
-  /** The underlying error, if the shell is being served as a fallback for a failed fetch. */
-  error?: unknown;
-  /** Error class resolved from the error, if any (falls back to "content-unreachable"). */
-  errorClass?: ErrorClass;
-}
-
 /** Options passed to the install() entry. */
 export interface InstallOpts {
   /** Suffix that, when stripped from the hostname, yields the ENS name. */
@@ -52,15 +40,6 @@ export interface InstallOpts {
   rpcUrls: string[];
   /** TTL for the in-memory ENS contenthash cache. Defaults to 5 min. */
   ensTtlMs?: number;
-  /**
-   * Optional renderer that returns the precached bootstrap shell. Used on
-   * fresh-entry navigations with a cache miss and as a fallback when an
-   * in-site navigation's resolve+fetch fails. If omitted, the library
-   * returns a plain-text Response with the right status.
-   */
-  renderBootstrapShell?: (
-    args: RenderShellArgs,
-  ) => Response | Promise<Response>;
 }
 
 /** Message bootstrap → SW. */

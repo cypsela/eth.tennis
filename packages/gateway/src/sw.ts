@@ -1,9 +1,5 @@
 /// <reference lib="webworker" />
-import {
-  type ContentFetcher,
-  install,
-  type RenderShellArgs,
-} from "@cypsela/gateway-sw-core";
+import { type ContentFetcher, install } from "@cypsela/gateway-sw-core";
 
 declare const __SHELL_ASSETS__: string[];
 declare const __BYPASS_PREFIXES__: string[];
@@ -66,25 +62,6 @@ sw.addEventListener("fetch", (event) => {
   })());
 });
 
-async function renderBootstrapShell(_args: RenderShellArgs): Promise<Response> {
-  const cache = await caches.open(CACHE_VERSION);
-  const shell = await cache.match("/");
-  if (shell) return shell.clone();
-  try {
-    const fresh = await fetch("/", { cache: "no-store" });
-    if (fresh.ok) {
-      await cache.put("/", fresh.clone());
-      return fresh;
-    }
-  } catch {
-    // fall through to plaintext error
-  }
-  return new Response("bootstrap shell unavailable", {
-    status: 500,
-    headers: { "content-type": "text/plain" },
-  });
-}
-
 const testContent: ContentFetcher | undefined = TEST_CONTENT_GATEWAY
   ? {
     async fetch(args) {
@@ -97,6 +74,5 @@ const testContent: ContentFetcher | undefined = TEST_CONTENT_GATEWAY
 install(sw, {
   gatewayDomain: GATEWAY_DOMAIN,
   rpcUrls: RPC_URLS,
-  renderBootstrapShell,
   ...(testContent ? { _content: testContent } : {}),
 });
