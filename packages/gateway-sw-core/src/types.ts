@@ -28,7 +28,7 @@ export interface Contenthash {
 
 /** Options for building an ENS resolver. */
 export interface ResolverOpts {
-  /** Ordered list of RPC endpoints. Sequential fallback on failure. */
+  /** RPC endpoints. Resolution races a random subset in parallel. */
   rpcUrls: string[];
 }
 
@@ -48,7 +48,7 @@ export interface RenderShellArgs {
 export interface InstallOpts {
   /** Suffix that, when stripped from the hostname, yields the ENS name. */
   gatewayDomain: string;
-  /** Ordered list of Ethereum RPC endpoints. Sequential fallback on failure. */
+  /** Ethereum RPC endpoints. Resolution races a random subset in parallel. */
   rpcUrls: string[];
   /** TTL for the in-memory ENS contenthash cache. Defaults to 5 min. */
   ensTtlMs?: number;
