@@ -18,16 +18,36 @@ export interface EnsResolver {
 
 const RACE_COUNT = 3;
 
-function pickRandom<T>(arr: readonly T[], n: number): T[] {
-  if (arr.length <= n) return [...arr];
+function shuffle<T>(arr: readonly T[]): T[] {
   const copy = [...arr];
-  for (let i = 0; i < n; i++) {
+  for (let i = 0; i < copy.length; i++) {
     const j = i + Math.floor(Math.random() * (copy.length - i));
     const tmp = copy[i]!;
     copy[i] = copy[j]!;
     copy[j] = tmp;
   }
-  return copy.slice(0, n);
+  return copy;
+}
+
+async function raceRecord<C>(
+  clients: readonly C[],
+  ensName: string,
+  lookup: (
+    c: C,
+    name: string,
+  ) => Promise<Awaited<ReturnType<typeof getContentHashRecord>>>,
+): Promise<
+  { record: Awaited<ReturnType<typeof getContentHashRecord>>; } | {
+    errors: unknown[];
+  }
+> {
+  try {
+    const record = await Promise.any(clients.map((c) => lookup(c, ensName)));
+    return { record };
+  } catch (cause) {
+    const errors = cause instanceof AggregateError ? cause.errors : [cause];
+    return { errors };
+  }
 }
 
 export function createResolver(opts: ResolverOpts): EnsResolver {
@@ -35,31 +55,31 @@ export function createResolver(opts: ResolverOpts): EnsResolver {
   const clients = opts.rpcUrls.map((url) =>
     createPublicClient({
       chain,
-      transport: http(url, { timeout: 5000, retryCount: 0 }),
+      transport: http(url, { timeout: 8000, retryCount: 1 }),
     })
   );
+  const lookup = (c: typeof clients[number], name: string) =>
+    getContentHashRecord(c, { name });
   return {
     async resolve(ensName) {
-      const picks = pickRandom(clients, RACE_COUNT);
-      let record: Awaited<ReturnType<typeof getContentHashRecord>>;
-      try {
-        record = await Promise.any(
-          picks.map((c) => getContentHashRecord(c, { name: ensName })),
-        );
-      } catch (cause) {
-        if (cause instanceof AggregateError) {
-          const detail = cause
-            .errors
-            .map((e) => e instanceof Error ? e.message : String(e))
-            .join("; ");
-          throw new RpcDown(
-            ensName,
-            new Error(`all ${cause.errors.length} rpc(s) failed: ${detail}`),
-          );
-        }
-        throw new RpcDown(ensName, cause);
+      const shuffled = shuffle(clients);
+      const batches = [
+        shuffled.slice(0, RACE_COUNT),
+        shuffled.slice(RACE_COUNT),
+      ].filter((b) => b.length > 0);
+      const errors: unknown[] = [];
+      for (const batch of batches) {
+        const result = await raceRecord(batch, ensName, lookup);
+        if ("record" in result) return decodeRecord(ensName, result.record);
+        errors.push(...result.errors);
       }
-      return decodeRecord(ensName, record);
+      const detail = errors.map((e) =>
+        e instanceof Error ? e.message : String(e)
+      ).join("; ");
+      throw new RpcDown(
+        ensName,
+        new Error(`all ${errors.length} rpc(s) failed: ${detail}`),
+      );
     },
   };
 }
