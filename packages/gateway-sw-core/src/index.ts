@@ -28,7 +28,7 @@ export function install(
   scope: ServiceWorkerGlobalScope,
   opts: InternalOpts,
 ): void {
-  const resolver = opts._resolver ?? createResolver({ rpcUrl: opts.rpcUrl });
+  const resolver = opts._resolver ?? createResolver({ rpcUrls: opts.rpcUrls });
   let contentPromise: Promise<ContentFetcher> | null = null;
   const getContent = () =>
     opts._content

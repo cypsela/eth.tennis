@@ -12,7 +12,15 @@ const sw = self as unknown as ServiceWorkerGlobalScope;
 
 const CACHE_VERSION = "bootstrap-v1";
 const GATEWAY_DOMAIN = import.meta.env.VITE_GATEWAY_DOMAIN ?? "gateway.example";
-const RPC_URL = import.meta.env.VITE_RPC_URL ?? "https://cloudflare-eth.com";
+const RPC_URLS = (import.meta.env.VITE_RPC_URLS ?? "")
+  .split(",")
+  .map((s) => s.trim())
+  .filter(Boolean);
+if (RPC_URLS.length === 0) {
+  throw new Error(
+    "VITE_RPC_URLS must be set to a non-empty comma-separated list",
+  );
+}
 const TEST_CONTENT_GATEWAY = import.meta.env.VITE_TEST_CONTENT_GATEWAY;
 
 const SHELL_ASSETS = __SHELL_ASSETS__;
@@ -88,7 +96,7 @@ const testContent: ContentFetcher | undefined = TEST_CONTENT_GATEWAY
 
 install(sw, {
   gatewayDomain: GATEWAY_DOMAIN,
-  rpcUrl: RPC_URL,
+  rpcUrls: RPC_URLS,
   renderBootstrapShell,
   ...(testContent ? { _content: testContent } : {}),
 });

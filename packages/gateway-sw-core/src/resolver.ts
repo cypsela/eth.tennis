@@ -1,7 +1,7 @@
 import { addEnsContracts } from "@ensdomains/ensjs";
 import type { ClientWithEns } from "@ensdomains/ensjs/contracts";
 import { getContentHashRecord } from "@ensdomains/ensjs/public";
-import { createPublicClient, http } from "viem";
+import { createPublicClient, fallback, http } from "viem";
 import { mainnet } from "viem/chains";
 
 import {
@@ -19,7 +19,10 @@ export interface EnsResolver {
 export function createResolver(opts: ResolverOpts): EnsResolver {
   const client = createPublicClient({
     chain: addEnsContracts(mainnet),
-    transport: http(opts.rpcUrl),
+    transport: fallback(
+      opts.rpcUrls.map((url) => http(url, { timeout: 5000, retryCount: 0 })),
+      { retryCount: 0 },
+    ),
   });
   return createResolverFromClient(client);
 }

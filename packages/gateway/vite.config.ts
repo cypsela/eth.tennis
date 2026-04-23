@@ -47,9 +47,8 @@ function serveSwInDev(): Plugin {
                 process.env["VITE_GATEWAY_DOMAIN"] ?? env["VITE_GATEWAY_DOMAIN"]
                   ?? "localhost",
               ),
-              "import.meta.env.VITE_RPC_URL": JSON.stringify(
-                process.env["VITE_RPC_URL"] ?? env["VITE_RPC_URL"]
-                  ?? "https://cloudflare-eth.com",
+              "import.meta.env.VITE_RPC_URLS": JSON.stringify(
+                process.env["VITE_RPC_URLS"] ?? env["VITE_RPC_URLS"] ?? "",
               ),
               "import.meta.env.VITE_TEST_CONTENT_GATEWAY": JSON.stringify(
                 process.env["VITE_TEST_CONTENT_GATEWAY"]

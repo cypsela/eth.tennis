@@ -18,7 +18,7 @@ export default defineConfig({
     reuseExistingServer: !process.env["CI"],
     timeout: 30_000,
     env: {
-      VITE_RPC_URL: "https://cloudflare-eth.com",
+      VITE_RPC_URLS: "https://cloudflare-eth.com",
       VITE_TEST_CONTENT_GATEWAY: "https://test-gateway.local",
     },
   },

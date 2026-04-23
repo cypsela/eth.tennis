@@ -74,7 +74,7 @@ Read by `@cypsela/gateway` at build and dev time:
 | Name                  | Default                      | Purpose                                                                |
 | --------------------- | ---------------------------- | ---------------------------------------------------------------------- |
 | `VITE_GATEWAY_DOMAIN` | `gateway.example`            | Suffix the SW strips from `location.hostname` to extract the ENS name. |
-| `VITE_RPC_URL`        | `https://cloudflare-eth.com` | Ethereum RPC endpoint for ENS reads.                                   |
+| `VITE_RPC_URLS`       | **required**                 | Comma-separated Ethereum RPC endpoints. Tried sequentially on failure. |
 
 Local defaults live in `packages/gateway/.env.development`; a template is at
 `packages/gateway/.env.example`.

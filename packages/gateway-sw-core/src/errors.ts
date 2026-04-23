@@ -64,7 +64,12 @@ export class IpnsRecordUnverifiable extends GatewayError {
 export class RpcDown extends GatewayError {
   readonly errorClass = "rpc-down" as const;
   constructor(ensName: string, cause?: unknown) {
-    super(ensName, `rpc down`);
+    const causeMsg = cause instanceof Error
+      ? cause.message
+      : cause != null
+      ? String(cause)
+      : "";
+    super(ensName, causeMsg ? `rpc down: ${causeMsg}` : "rpc down");
     if (cause !== undefined) {
       (this as { cause?: unknown; }).cause = cause;
     }
