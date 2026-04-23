@@ -8,6 +8,7 @@ dist
 !.env.example
 !packages/*/.env.development
 !packages/*/.env.example
+!packages/*/.env.production
 coverage
 playwright-report
 test-results
