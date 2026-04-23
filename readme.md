@@ -23,7 +23,7 @@ mapping. User-configurable RPC and light-client mode are post-v1 work.
 
 ## How it works
 
-1. Cold visit to `vitalik.eth.<GATEWAY_DOMAIN>/path`. Cloudflare Pages serves
+1. Cold visit to `vitalik.eth.<GATEWAY_DOMAIN>/path`. A static host serves
    the bootstrap HTML.
 2. Bootstrap registers `/gw-sw.js`, then asks it (via `postMessage`) to
    resolve-and-fetch. The SW streams progress lines back, rendered as a
@@ -81,9 +81,9 @@ Local defaults live in `packages/gateway/.env.development`; a template is at
 
 ## Deploy
 
-Production target is Cloudflare Pages with a two-level wildcard certificate
-(for ENSIP-10 subnames like `app.vitalik.eth.<domain>`). Step-by-step setup
-in [`docs/deploy.md`](docs/deploy.md).
+Any static host works. TLS must cover every subname depth the gateway is
+expected to serve (`*.eth.<domain>`, `*.*.eth.<domain>`, and so on for
+ENSIP-10 subnames like `app.vitalik.eth.<domain>`).
 
 ## Design
 
