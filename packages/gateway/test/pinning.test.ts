@@ -8,7 +8,7 @@ const SAMPLE_CID = CID.parse(
 
 function fakeIter(yields: number, throwAfter?: number): AsyncGenerator<CID> {
   let i = 0;
-  return {
+  const gen: AsyncGenerator<CID> = {
     next: async () => {
       if (throwAfter !== undefined && i === throwAfter) {
         throw new Error("drain-fail");
@@ -24,9 +24,11 @@ function fakeIter(yields: number, throwAfter?: number): AsyncGenerator<CID> {
       throw e;
     },
     [Symbol.asyncIterator]() {
-      return this;
+      return gen;
     },
+    [Symbol.asyncDispose]: async () => {},
   };
+  return gen;
 }
 
 describe("fetchRootThenDrain", () => {
