@@ -1,5 +1,5 @@
 import { describe, expect, test } from "vitest";
-import { formatLine, makeLogger } from "../src/log.js";
+import { formatHop, formatLine, formatRef, makeLogger } from "../src/log.js";
 
 describe("formatLine", () => {
   test("pads source column to width 10, formats timestamp to 3dp", () => {
@@ -56,5 +56,20 @@ describe("makeLogger", () => {
       text: "done",
       glyph: "✓",
     }]);
+  });
+});
+
+describe("formatRef / formatHop", () => {
+  test("formatRef renders '<protocol>://<value>'", () => {
+    expect(formatRef({ kind: "address", protocol: "ens", value: "x.eth" }))
+      .toBe("ens://x.eth");
+    expect(formatRef({ kind: "content", protocol: "ipfs", value: "bafy" }))
+      .toBe("ipfs://bafy");
+  });
+
+  test("formatHop joins two refs with '→'", () => {
+    const a = { kind: "address" as const, protocol: "ens", value: "x.eth" };
+    const b = { kind: "content" as const, protocol: "ipfs", value: "bafy" };
+    expect(formatHop(a, b)).toBe("ens://x.eth → ipfs://bafy");
   });
 });

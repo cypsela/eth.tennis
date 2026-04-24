@@ -1,4 +1,12 @@
-import type { Glyph, LogLevel, LogSource } from "./types.js";
+import type { Glyph, LogLevel, LogSource, Reference } from "./types.js";
+
+export function formatRef(ref: Reference): string {
+  return `${ref.protocol}://${ref.value}`;
+}
+
+export function formatHop(from: Reference, to: Reference): string {
+  return `${formatRef(from)} → ${formatRef(to)}`;
+}
 
 export interface LogEntry {
   t: number;
