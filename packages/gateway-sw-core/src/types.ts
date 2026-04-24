@@ -54,3 +54,45 @@ export type SwToBootstrap =
   | { type: "log"; source: "sw"; level: LogLevel; text: string; glyph?: Glyph; }
   | { type: "done"; }
   | { type: "error"; error: ErrorClass; details?: unknown; };
+
+/** Unresolved reference — e.g. an ENS name or IPNS key. */
+export interface AddressReference<P extends string = string> {
+  readonly kind: "address";
+  readonly protocol: P;
+  readonly value: string;
+}
+
+/** Content-addressed reference — e.g. an IPFS CID. */
+export interface ContentReference<P extends string = string> {
+  readonly kind: "content";
+  readonly protocol: P;
+  readonly value: string;
+}
+
+/** Discriminated union over both reference kinds. */
+export type Reference = AddressReference | ContentReference;
+
+/** Resolves an address reference one hop closer to a content reference. */
+export interface Resolver<P extends string = string> {
+  readonly protocol: P;
+  resolve(ref: AddressReference<P>): Promise<Reference>;
+}
+
+/** Fetches a subresource under a content reference. */
+export interface ContentFetcher<P extends string = string> {
+  readonly protocol: P;
+  fetch(ref: ContentReference<P>, path: string): Promise<Response>;
+}
+
+/** Registry of handlers keyed by protocol string. */
+export interface Handlers {
+  resolvers: Record<string, Resolver>;
+  fetchers: Record<string, ContentFetcher>;
+}
+
+/** Two-slot site mount: serving `current`, staging `pending`. */
+export type SiteMount = {
+  current: ContentReference | null;
+  pending: ContentReference | null;
+  lastChecked: number;
+};

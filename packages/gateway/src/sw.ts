@@ -1,5 +1,5 @@
 /// <reference lib="webworker" />
-import { type ContentFetcher, install } from "@cypsela/gateway-sw-core";
+import { install, type LegacyContentFetcher } from "@cypsela/gateway-sw-core";
 
 declare const __SHELL_ASSETS__: string[];
 declare const __BYPASS_PREFIXES__: string[];
@@ -62,7 +62,7 @@ sw.addEventListener("fetch", (event) => {
   })());
 });
 
-const testContent: ContentFetcher | undefined = TEST_CONTENT_GATEWAY
+const testContent: LegacyContentFetcher | undefined = TEST_CONTENT_GATEWAY
   ? {
     async fetch(args) {
       const path = args.path.startsWith("/") ? args.path : `/${args.path}`;

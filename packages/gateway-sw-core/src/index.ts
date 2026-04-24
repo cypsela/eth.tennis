@@ -1,6 +1,11 @@
 export const VERSION = "0.0.0";
 export * from "./cache.js";
-export * from "./content.js";
+export {
+  type ContentFetcher as LegacyContentFetcher,
+  createContentFetcher,
+  createContentFetcherFromImpl,
+  type FetchArgs,
+} from "./content.js";
 export * from "./errors.js";
 export * from "./log.js";
 export * from "./resolver.js";
