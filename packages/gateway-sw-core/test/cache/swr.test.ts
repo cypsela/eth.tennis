@@ -1,5 +1,5 @@
 import { describe, expect, test, vi } from "vitest";
-import { createSwrCache } from "../src/cache.js";
+import { createSwrCache } from "../../src/cache/swr.js";
 
 describe("createSwrCache", () => {
   test("returns undefined for missing keys", () => {

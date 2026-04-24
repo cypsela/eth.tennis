@@ -1,5 +1,5 @@
 export const VERSION = "0.0.0";
-export * from "./cache.js";
+export * from "./cache/swr.js";
 export {
   type ContentFetcher as LegacyContentFetcher,
   createContentFetcher,
@@ -11,7 +11,7 @@ export * from "./log.js";
 export * from "./resolver.js";
 export * from "./types.js";
 
-import { createSwrCache } from "./cache.js";
+import { createSwrCache } from "./cache/swr.js";
 import { type ContentFetcher, createContentFetcher } from "./content.js";
 import { ContentUnreachable, GatewayError, httpStatusFor } from "./errors.js";
 import { createResolver, type EnsResolver } from "./resolver.js";
