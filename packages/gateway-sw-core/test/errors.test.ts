@@ -1,6 +1,5 @@
 import { describe, expect, test } from "vitest";
 import {
-  ContentUnreachable,
   EnsNotFound,
   GatewayError,
   httpStatusFor,
@@ -17,9 +16,6 @@ describe("GatewayError subclasses", () => {
     expect(new NoContenthash("vitalik.eth").errorClass).toBe("no-contenthash");
     expect(new UnsupportedProtocol("vitalik.eth", "swarm").errorClass).toBe(
       "unsupported-protocol",
-    );
-    expect(new ContentUnreachable("vitalik.eth", "bafy").errorClass).toBe(
-      "content-unreachable",
     );
     expect(new IpnsRecordNotFound("vitalik.eth", "k51").errorClass).toBe(
       "ipns-record-not-found",
@@ -40,7 +36,6 @@ describe("httpStatusFor", () => {
     expect(httpStatusFor("ens-not-found")).toBe(404);
     expect(httpStatusFor("no-contenthash")).toBe(404);
     expect(httpStatusFor("unsupported-protocol")).toBe(415);
-    expect(httpStatusFor("content-unreachable")).toBe(502);
     expect(httpStatusFor("ipns-record-not-found")).toBe(404);
     expect(httpStatusFor("ipns-record-unverifiable")).toBe(502);
     expect(httpStatusFor("rpc-down")).toBe(503);

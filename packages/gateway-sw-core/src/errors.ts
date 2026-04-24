@@ -23,16 +23,6 @@ export class UnsupportedProtocol extends GatewayError {
   }
 }
 
-export class ContentUnreachable extends GatewayError {
-  readonly errorClass = "content-unreachable" as const;
-  constructor(ensName: string, public readonly cid: string, cause?: unknown) {
-    super(ensName, `content unreachable: ${cid}`);
-    if (cause !== undefined) {
-      (this as { cause?: unknown; }).cause = cause;
-    }
-  }
-}
-
 export class IpnsRecordNotFound extends GatewayError {
   readonly errorClass = "ipns-record-not-found" as const;
   constructor(
@@ -107,7 +97,6 @@ const STATUS: Record<ErrorClass, number> = {
   "ens-not-found": 404,
   "no-contenthash": 404,
   "unsupported-protocol": 415,
-  "content-unreachable": 502,
   "no-handler": 501,
   "resolution-loop": 508,
   "ipns-record-not-found": 404,
