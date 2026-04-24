@@ -1,11 +1,14 @@
 /// <reference lib="webworker" />
 import {
+  type ContentFetcher,
   type ContentReference,
   createEnsResolver,
   createGatewayHelia,
   createIpfsFetcher,
   createIpnsResolver,
   createSiteMountStore,
+  deriveDbNames,
+  type ErrorClass,
   fetchReference,
   formatRef,
   type Handlers,
@@ -35,14 +38,15 @@ if (RPC_URLS.length === 0) {
     "VITE_RPC_URLS must be set to a non-empty comma-separated list",
   );
 }
+const TEST_CONTENT_GATEWAY: string = import.meta.env.VITE_TEST_CONTENT_GATEWAY
+  ?? "";
 
 const SHELL_ASSETS = __SHELL_ASSETS__;
 const BYPASS_PREFIXES = __BYPASS_PREFIXES__;
 const PRECACHE = ["/", ...SHELL_ASSETS];
 const BYPASS_PATHS = new Set<string>(SHELL_ASSETS);
 
-function shouldBypass(pathname: string): boolean {
-  if (pathname === "/") return true;
+function isShellAsset(pathname: string): boolean {
   if (BYPASS_PATHS.has(pathname)) return true;
   return BYPASS_PREFIXES.some((p) => pathname.startsWith(p));
 }
@@ -63,27 +67,62 @@ interface Runtime {
 
 let runtimeP: Promise<Runtime> | null = null;
 
+async function createHttpTestRuntime(baseUrl: string): Promise<Runtime> {
+  const { IDBDatastore } = await import("datastore-idb");
+  const { data } = deriveDbNames({ namespace: GATEWAY_DOMAIN });
+  const datastore = new IDBDatastore(data);
+  await datastore.open();
+  const helia = {
+    datastore,
+    pins: { add: async function*() {}, rm: async function*() {} },
+  } as unknown as Helia;
+  const store = createSiteMountStore(helia.datastore);
+  const policy = createMountPolicy({ store, helia });
+  const ipfsFetcher: ContentFetcher<"ipfs"> = {
+    protocol: "ipfs",
+    async fetch(ref, path) {
+      const p = path.startsWith("/") ? path : `/${path}`;
+      return fetch(`${baseUrl}/ipfs/${ref.value}${p}`);
+    },
+  };
+  const handlers: Handlers = {
+    resolvers: { ens: createEnsResolver({ rpcUrls: RPC_URLS }) },
+    fetchers: { ipfs: ipfsFetcher },
+  };
+  const updateCheck = createUpdateCheck({
+    helia,
+    handlers,
+    policy,
+    ttlMs: 5 * 60_000,
+  });
+  return { helia, handlers, policy, updateCheck };
+}
+
+async function createProdRuntime(): Promise<Runtime> {
+  const helia = await createGatewayHelia({ namespace: GATEWAY_DOMAIN });
+  const store = createSiteMountStore(helia.datastore);
+  const policy = createMountPolicy({ store, helia });
+  const handlers: Handlers = {
+    resolvers: {
+      ens: createEnsResolver({ rpcUrls: RPC_URLS }),
+      ipns: createIpnsResolver(helia as never),
+    },
+    fetchers: { ipfs: await createIpfsFetcher({ helia }) },
+  };
+  const updateCheck = createUpdateCheck({
+    helia,
+    handlers,
+    policy,
+    ttlMs: 5 * 60_000,
+  });
+  return { helia, handlers, policy, updateCheck };
+}
+
 async function getRuntime(): Promise<Runtime> {
   if (!runtimeP) {
-    runtimeP = (async () => {
-      const helia = await createGatewayHelia({ namespace: GATEWAY_DOMAIN });
-      const store = createSiteMountStore(helia.datastore);
-      const policy = createMountPolicy({ store, helia });
-      const handlers: Handlers = {
-        resolvers: {
-          ens: createEnsResolver({ rpcUrls: RPC_URLS }),
-          ipns: createIpnsResolver(helia as never),
-        },
-        fetchers: { ipfs: await createIpfsFetcher({ helia }) },
-      };
-      const updateCheck = createUpdateCheck({
-        helia,
-        handlers,
-        policy,
-        ttlMs: 5 * 60_000,
-      });
-      return { helia, handlers, policy, updateCheck };
-    })();
+    runtimeP = TEST_CONTENT_GATEWAY
+      ? createHttpTestRuntime(TEST_CONTENT_GATEWAY)
+      : createProdRuntime();
   }
   return runtimeP;
 }
@@ -117,7 +156,7 @@ sw.addEventListener("activate", (event) => {
         if (result) {
           const from = result.oldCurrent ? formatRef(result.oldCurrent) : "∅";
           console.info(
-            `[gateway] updated ${ensName}: ${from} → ` + `${
+            `[gateway] updated ${ensName}: ${from} → ${
               formatRef(result.newCurrent)
             }`,
           );
@@ -135,7 +174,7 @@ sw.addEventListener("message", (event) => {
     !msg || typeof msg !== "object" || (msg as { type?: string; })
         .type !== "resolve-and-fetch"
   ) return;
-  const { ensName, path } = msg as { ensName: string; path: string; };
+  const { ensName } = msg as { ensName: string; path: string; };
   const source = event.source as Client | null;
   event.waitUntil((async () => {
     try {
@@ -191,12 +230,18 @@ sw.addEventListener("message", (event) => {
         text: `mounted ${ensName}`,
       });
       source?.postMessage({ type: "done" });
-      path;
     } catch (err) {
       const detail = err instanceof Error ? err.message : String(err);
-      const errorClass = (err as { errorClass?: string; }).errorClass
-        ?? "content-unreachable";
+      const errorClass: ErrorClass = (err as { errorClass?: ErrorClass; })
+        .errorClass ?? "rpc-down";
       console.error(`[gateway] bootstrap failed for ${ensName}:`, err);
+      source?.postMessage({
+        type: "log",
+        source: "sw",
+        level: "error",
+        glyph: "✗",
+        text: `${errorClass}: ${detail}`,
+      });
       source?.postMessage({
         type: "error",
         error: errorClass,
@@ -210,7 +255,9 @@ sw.addEventListener("fetch", (event) => {
   const request = event.request;
   const url = new URL(request.url);
 
-  if (url.origin === sw.location.origin && shouldBypass(url.pathname)) {
+  if (url.origin !== sw.location.origin) return;
+
+  if (isShellAsset(url.pathname)) {
     event.respondWith((async () => {
       const cache = await caches.open(CACHE_VERSION);
       const hit = await cache.match(url.pathname);
@@ -219,8 +266,6 @@ sw.addEventListener("fetch", (event) => {
     })());
     return;
   }
-
-  if (url.origin !== sw.location.origin) return;
 
   const ensName = extractEnsName(url.hostname);
   if (!ensName) return;
