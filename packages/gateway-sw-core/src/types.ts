@@ -16,6 +16,8 @@ export type ErrorClass =
   | "no-contenthash"
   | "unsupported-protocol"
   | "content-unreachable"
+  | "no-handler"
+  | "resolution-loop"
   | "ipns-record-not-found"
   | "ipns-record-unverifiable"
   | "rpc-down";

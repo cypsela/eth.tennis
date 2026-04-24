@@ -1,4 +1,4 @@
-import type { ErrorClass } from "./types.js";
+import type { ErrorClass, Reference } from "./types.js";
 
 export abstract class GatewayError extends Error {
   abstract readonly errorClass: ErrorClass;
@@ -76,6 +76,30 @@ export class RpcDown extends GatewayError {
   }
 }
 
+export class NoHandler extends GatewayError {
+  readonly errorClass = "no-handler" as const;
+  constructor(public readonly ref: Reference) {
+    super(
+      ref.value,
+      `no handler registered for ${ref.protocol}://${ref.value}`,
+    );
+  }
+}
+
+export class ResolutionLoop extends GatewayError {
+  readonly errorClass = "resolution-loop" as const;
+  constructor(
+    public readonly start: Reference,
+    public readonly maxHops: number,
+  ) {
+    super(
+      start.value,
+      `resolution exceeded ${maxHops} hops starting from `
+        + `${start.protocol}://${start.value}`,
+    );
+  }
+}
+
 const STATUS: Record<ErrorClass, number> = {
   "sw-unsupported": 500,
   "sw-register-failed": 500,
@@ -84,6 +108,8 @@ const STATUS: Record<ErrorClass, number> = {
   "no-contenthash": 404,
   "unsupported-protocol": 415,
   "content-unreachable": 502,
+  "no-handler": 501,
+  "resolution-loop": 508,
   "ipns-record-not-found": 404,
   "ipns-record-unverifiable": 502,
   "rpc-down": 503,

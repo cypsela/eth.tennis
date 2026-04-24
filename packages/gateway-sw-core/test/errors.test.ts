@@ -46,3 +46,38 @@ describe("httpStatusFor", () => {
     expect(httpStatusFor("rpc-down")).toBe(503);
   });
 });
+
+import { NoHandler, ResolutionLoop } from "../src/errors.js";
+
+describe("NoHandler", () => {
+  test("carries 'no-handler' errorClass and references the offending ref", () => {
+    const ref = { kind: "address", protocol: "ens", value: "x.eth" } as const;
+    const err = new NoHandler(ref);
+    expect(err.errorClass).toBe("no-handler");
+    expect(err.ref).toBe(ref);
+    expect(err.message).toContain("ens://x.eth");
+  });
+
+  test("extends GatewayError", () => {
+    const ref = { kind: "content", protocol: "ipfs", value: "bafy" } as const;
+    expect(new NoHandler(ref) instanceof GatewayError).toBe(true);
+  });
+});
+
+describe("ResolutionLoop", () => {
+  test("carries 'resolution-loop' errorClass and the start ref + hop limit", () => {
+    const start = { kind: "address", protocol: "ipns", value: "k51" } as const;
+    const err = new ResolutionLoop(start, 8);
+    expect(err.errorClass).toBe("resolution-loop");
+    expect(err.start).toBe(start);
+    expect(err.maxHops).toBe(8);
+    expect(err.message).toContain("8");
+  });
+});
+
+describe("httpStatusFor new classes", () => {
+  test("no-handler → 501, resolution-loop → 508", () => {
+    expect(httpStatusFor("no-handler")).toBe(501);
+    expect(httpStatusFor("resolution-loop")).toBe(508);
+  });
+});
