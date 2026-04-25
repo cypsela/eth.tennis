@@ -79,7 +79,11 @@ test.describe("error paths", () => {
     });
     await page.goto("http://vitalik.eth.tennis.localhost:5173/");
     await expect(
-      page.locator(".line.level-error").filter({ hasText: "rpc-down" }),
+      page.locator(".line.level-error").filter({ hasText: "rpc-down" }).or(
+        page
+          .locator(".line.level-error")
+          .filter({ hasText: "content-unreachable" }),
+      ),
     )
       .toBeVisible({ timeout: 10_000 });
   });

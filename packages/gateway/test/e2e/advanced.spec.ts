@@ -1,8 +1,8 @@
 import { expect, test } from "./setup.ts";
 
-const APP_CID = "bafybeibj6lixxzqtsb45ysdjnupvqkufgdvzqbnvmhw2kf7cfkesy7r7d4";
+const APP_CID = "bafybeihrizo7o6ndrzjhmpmmt3ffxkzqo3iqwclqprlsxbzfje4gaewjyu";
 const VITALIK_CID =
-  "bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi";
+  "bafybeidgjk7gtp2npzz2zunaih3zg5vzoa4atiobb4pdvsgjjhdsymal34";
 
 test.describe("advanced paths", () => {
   test.use({
@@ -11,12 +11,8 @@ test.describe("advanced paths", () => {
       "vitalik.eth": { protocol: "ipfs", cid: VITALIK_CID },
     },
     ipfs: {
-      [APP_CID]: {
-        "/index.html": { body: "<h1>app</h1>", contentType: "text/html" },
-      },
-      [VITALIK_CID]: {
-        "/index.html": { body: "<h1>vitalik</h1>", contentType: "text/html" },
-      },
+      [APP_CID]: { files: { "/index.html": "<h1>app</h1>" } },
+      [VITALIK_CID]: { files: { "/index.html": "<h1>vitalik</h1>" } },
     },
   });
 

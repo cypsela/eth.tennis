@@ -1,6 +1,5 @@
 /// <reference lib="webworker" />
 import {
-  type ContentFetcher,
   type ContentReference,
   ContentUnreachable,
   createEnsResolver,
@@ -8,7 +7,6 @@ import {
   createIpfsFetcher,
   createIpnsResolver,
   createSiteMountStore,
-  deriveDbNames,
   type ErrorClass,
   fetchReference,
   formatRef,
@@ -39,9 +37,6 @@ if (RPC_URLS.length === 0) {
     "VITE_RPC_URLS must be set to a non-empty comma-separated list",
   );
 }
-const TEST_CONTENT_GATEWAY: string = import.meta.env.VITE_TEST_CONTENT_GATEWAY
-  ?? "";
-
 const SHELL_ASSETS = __SHELL_ASSETS__;
 const BYPASS_PREFIXES = __BYPASS_PREFIXES__;
 const PRECACHE = ["/", ...SHELL_ASSETS];
@@ -68,38 +63,7 @@ interface Runtime {
 
 let runtimeP: Promise<Runtime> | null = null;
 
-async function createHttpTestRuntime(baseUrl: string): Promise<Runtime> {
-  const { IDBDatastore } = await import("datastore-idb");
-  const { data } = deriveDbNames({ namespace: GATEWAY_DOMAIN });
-  const datastore = new IDBDatastore(data);
-  await datastore.open();
-  const helia = {
-    datastore,
-    pins: { add: async function*() {}, rm: async function*() {} },
-  } as unknown as Helia;
-  const store = createSiteMountStore(helia.datastore);
-  const policy = createMountPolicy({ store, helia });
-  const ipfsFetcher: ContentFetcher<"ipfs"> = {
-    protocol: "ipfs",
-    async fetch(ref, path) {
-      const p = path.startsWith("/") ? path : `/${path}`;
-      return fetch(`${baseUrl}/ipfs/${ref.value}${p}`);
-    },
-  };
-  const handlers: Handlers = {
-    resolvers: { ens: createEnsResolver({ rpcUrls: RPC_URLS }) },
-    fetchers: { ipfs: ipfsFetcher },
-  };
-  const updateCheck = createUpdateCheck({
-    helia,
-    handlers,
-    policy,
-    ttlMs: 5 * 60_000,
-  });
-  return { helia, handlers, policy, updateCheck };
-}
-
-async function createProdRuntime(): Promise<Runtime> {
+async function createRuntime(): Promise<Runtime> {
   const helia = await createGatewayHelia({ namespace: GATEWAY_DOMAIN });
   const store = createSiteMountStore(helia.datastore);
   const policy = createMountPolicy({ store, helia });
@@ -121,9 +85,7 @@ async function createProdRuntime(): Promise<Runtime> {
 
 async function getRuntime(): Promise<Runtime> {
   if (!runtimeP) {
-    runtimeP = TEST_CONTENT_GATEWAY
-      ? createHttpTestRuntime(TEST_CONTENT_GATEWAY)
-      : createProdRuntime();
+    runtimeP = createRuntime();
   }
   return runtimeP;
 }

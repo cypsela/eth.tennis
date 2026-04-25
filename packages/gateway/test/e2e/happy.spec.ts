@@ -4,15 +4,12 @@ test.use({
   rpc: {
     "vitalik.eth": {
       protocol: "ipfs",
-      cid: "bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi",
+      cid: "bafybeidzx4bdinhpdc62rppw4aoqwshigmkcrvfemhyxuqpotigcyzflsu",
     },
   },
   ipfs: {
-    "bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi": {
-      "/index.html": {
-        body: "<h1>hello vitalik</h1>",
-        contentType: "text/html",
-      },
+    "bafybeidzx4bdinhpdc62rppw4aoqwshigmkcrvfemhyxuqpotigcyzflsu": {
+      files: { "/index.html": "<h1>hello vitalik</h1>" },
     },
   },
 });

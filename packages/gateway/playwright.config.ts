@@ -13,13 +13,9 @@ export default defineConfig({
     { name: "chromium", use: devices["Desktop Chrome"] },
   ],
   webServer: {
-    command: "pnpm run dev -- --host 0.0.0.0",
+    command: "pnpm exec vite --mode test",
     url: "http://localhost:5173",
     reuseExistingServer: !process.env["CI"],
     timeout: 30_000,
-    env: {
-      VITE_RPC_URLS: "https://cloudflare-eth.com",
-      VITE_TEST_CONTENT_GATEWAY: "https://test-gateway.local",
-    },
   },
 });

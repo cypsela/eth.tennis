@@ -50,10 +50,6 @@ function serveSwInDev(): Plugin {
               "import.meta.env.VITE_RPC_URLS": JSON.stringify(
                 process.env["VITE_RPC_URLS"] ?? env["VITE_RPC_URLS"] ?? "",
               ),
-              "import.meta.env.VITE_TEST_CONTENT_GATEWAY": JSON.stringify(
-                process.env["VITE_TEST_CONTENT_GATEWAY"]
-                  ?? env["VITE_TEST_CONTENT_GATEWAY"] ?? "",
-              ),
               "process.env.NODE_ENV": JSON.stringify("development"),
               "__SHELL_ASSETS__": JSON.stringify([]),
               "__BYPASS_PREFIXES__": JSON.stringify([
