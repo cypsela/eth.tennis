@@ -1,10 +1,10 @@
+import { createHeliaHTTP } from "@helia/http";
+import type { Helia } from "@helia/interface";
 import { IDBBlockstore } from "blockstore-idb";
 import { IDBDatastore } from "datastore-idb";
-import type { Helia } from "helia";
 
 export interface GatewayHeliaOpts {
   namespace?: string;
-  libp2p?: unknown;
 }
 
 const DEFAULT_NAMESPACE = "@cypsela/gateway-sw-core";
@@ -22,12 +22,9 @@ export async function createGatewayHelia(
   const { blocks, data } = deriveDbNames(opts);
   const blockstore = new IDBBlockstore(blocks);
   const datastore = new IDBDatastore(data);
+  // IDB stores require explicit open(); helia's start() only invokes
+  // Startable.start()/stop(), which these don't implement.
   await blockstore.open();
   await datastore.open();
-  const { createHelia } = await import("helia");
-  return createHelia({
-    blockstore,
-    datastore,
-    ...(opts.libp2p ? { libp2p: opts.libp2p as never } : {}),
-  });
+  return createHeliaHTTP({ blockstore, datastore });
 }

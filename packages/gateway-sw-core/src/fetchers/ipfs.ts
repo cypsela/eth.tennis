@@ -1,5 +1,5 @@
+import type { Helia } from "@helia/interface";
 import type { VerifiedFetch } from "@helia/verified-fetch";
-import type { Helia } from "helia";
 
 import type { ContentFetcher, ContentReference } from "../types.js";
 
