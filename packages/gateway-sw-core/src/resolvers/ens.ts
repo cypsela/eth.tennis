@@ -113,6 +113,27 @@ export function createEnsResolverFromClient(
   };
 }
 
+export function createRacingEnsResolver(
+  opts: EnsResolverOpts,
+): Resolver<"ens"> {
+  const chain = addEnsContracts(mainnet);
+  const clients = opts.rpcUrls.map((url) =>
+    createPublicClient({
+      chain,
+      transport: http(url, { timeout: 4000, retryCount: 1 }),
+    })
+  );
+  return {
+    protocol: "ens",
+    async resolve(ref: AddressReference<"ens">): Promise<Reference> {
+      return lookupAndDecode(ref.value, () =>
+        Promise
+          .any(clients
+            .map((c) => getContentHashRecord(c, { name: ref.value }))));
+    },
+  };
+}
+
 function decodeRecord(
   ensName: string,
   record: Awaited<ReturnType<typeof getContentHashRecord>>,

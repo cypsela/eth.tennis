@@ -5,7 +5,10 @@ import {
   NoContenthash,
   UnsupportedProtocol,
 } from "../../src/errors.js";
-import { createEnsResolverFromClient } from "../../src/resolvers/ens.js";
+import {
+  createEnsResolverFromClient,
+  createRacingEnsResolver,
+} from "../../src/resolvers/ens.js";
 
 vi.mock("@ensdomains/ensjs/public", () => ({ getContentHashRecord: vi.fn() }));
 
@@ -84,6 +87,39 @@ describe("ens resolver", () => {
     } catch (err) {
       expect(err).toBeInstanceOf(EnsResolveFailed);
       expect((err as { cause?: unknown; }).cause).toBe(cause);
+    }
+  });
+});
+
+describe("createRacingEnsResolver", () => {
+  const opts = { rpcUrls: ["https://r1", "https://r2", "https://r3"] };
+
+  test("first resolving client wins; reference is decoded", async () => {
+    mocked.mockResolvedValueOnce({ protocolType: "ipfs", decoded: "bafy" });
+    mocked.mockRejectedValueOnce(new Error("rpc 2 failed"));
+    mocked.mockRejectedValueOnce(new Error("rpc 3 failed"));
+    const r = createRacingEnsResolver(opts);
+    const out = await r.resolve({
+      kind: "address",
+      protocol: "ens",
+      value: "v.eth",
+    });
+    expect(out).toEqual({ kind: "content", protocol: "ipfs", value: "bafy" });
+  });
+
+  test("all clients reject → EnsResolveFailed with AggregateError cause", async () => {
+    mocked.mockRejectedValueOnce(new Error("rpc 1 failed"));
+    mocked.mockRejectedValueOnce(new Error("rpc 2 failed"));
+    mocked.mockRejectedValueOnce(new Error("rpc 3 failed"));
+    const r = createRacingEnsResolver(opts);
+    try {
+      await r.resolve({ kind: "address", protocol: "ens", value: "v.eth" });
+      throw new Error("expected resolve to throw");
+    } catch (err) {
+      expect(err).toBeInstanceOf(EnsResolveFailed);
+      const cause = (err as { cause?: unknown; }).cause;
+      expect(cause).toBeInstanceOf(AggregateError);
+      expect((cause as AggregateError).errors).toHaveLength(3);
     }
   });
 });
