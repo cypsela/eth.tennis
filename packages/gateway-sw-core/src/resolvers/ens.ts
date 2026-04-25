@@ -5,9 +5,8 @@ import { createPublicClient, fallback, http } from "viem";
 import { mainnet } from "viem/chains";
 
 import {
-  EnsNotFound,
+  ContenthashNotFound,
   EnsResolveFailed,
-  NoContenthash,
   UnsupportedProtocol,
 } from "../errors.js";
 import type { AddressReference, Reference, Resolver } from "../types.js";
@@ -82,10 +81,10 @@ function decodeRecord(
   ensName: string,
   record: Awaited<ReturnType<typeof getContentHashRecord>>,
 ): Reference {
-  if (record == null) throw new EnsNotFound(ensName);
+  if (record == null) throw new ContenthashNotFound(ensName);
   const proto = record.protocolType;
   const value = record.decoded;
-  if (!value) throw new NoContenthash(ensName);
+  if (!value) throw new EnsResolveFailed(ensName);
   if (proto === "ipfs") {
     return { kind: "content", protocol: "ipfs", value };
   }

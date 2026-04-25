@@ -8,12 +8,8 @@ export abstract class GatewayError extends Error {
   }
 }
 
-export class EnsNotFound extends GatewayError {
-  readonly errorClass = "ens-not-found" as const;
-}
-
-export class NoContenthash extends GatewayError {
-  readonly errorClass = "no-contenthash" as const;
+export class ContenthashNotFound extends GatewayError {
+  readonly errorClass = "contenthash-not-found" as const;
 }
 
 export class UnsupportedProtocol extends GatewayError {

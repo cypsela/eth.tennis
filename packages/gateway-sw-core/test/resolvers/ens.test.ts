@@ -1,8 +1,7 @@
 import { describe, expect, test, vi } from "vitest";
 import {
-  EnsNotFound,
+  ContenthashNotFound,
   EnsResolveFailed,
-  NoContenthash,
   UnsupportedProtocol,
 } from "../../src/errors.js";
 import {
@@ -45,24 +44,24 @@ describe("ens resolver", () => {
     expect(out).toEqual({ kind: "address", protocol: "ipns", value: "k51" });
   });
 
-  test("null record → EnsNotFound", async () => {
+  test("null record → ContenthashNotFound", async () => {
     mocked.mockResolvedValueOnce(null);
     const r = createEnsResolverFromClient(client);
     await expect(
       r.resolve({ kind: "address", protocol: "ens", value: "ghost.eth" }),
     )
       .rejects
-      .toBeInstanceOf(EnsNotFound);
+      .toBeInstanceOf(ContenthashNotFound);
   });
 
-  test("empty decoded → NoContenthash", async () => {
+  test("empty decoded → EnsResolveFailed", async () => {
     mocked.mockResolvedValueOnce({ protocolType: "ipfs", decoded: "" });
     const r = createEnsResolverFromClient(client);
     await expect(
       r.resolve({ kind: "address", protocol: "ens", value: "empty.eth" }),
     )
       .rejects
-      .toBeInstanceOf(NoContenthash);
+      .toBeInstanceOf(EnsResolveFailed);
   });
 
   test("non ipfs/ipns protocol → UnsupportedProtocol", async () => {
