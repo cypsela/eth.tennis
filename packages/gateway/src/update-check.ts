@@ -10,6 +10,7 @@ import {
 import type { Helia } from "@helia/interface";
 import { CID } from "multiformats/cid";
 
+import { logErrorTree } from "./log-error.ts";
 import type { MountPolicy } from "./mount-policy.ts";
 import { fetchRootThenDrain } from "./pinning.ts";
 
@@ -39,7 +40,13 @@ export function createUpdateCheck(opts: UpdateCheckOpts): UpdateCheck {
     };
     const onHop = (from: Reference, to: Reference) =>
       console.info(`[gateway] ${ensName}: ${formatHop(from, to)}`);
-    const fresh = await resolveReference(start, opts.handlers, { onHop });
+    let fresh: Reference;
+    try {
+      fresh = await resolveReference(start, opts.handlers, { onHop });
+    } catch (err) {
+      logErrorTree(`[gateway] update-check failed for ${ensName}:`, err);
+      throw err;
+    }
 
     const mount = await opts.policy.read();
     const latest = mount.pending ?? mount.current;

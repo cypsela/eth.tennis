@@ -15,6 +15,7 @@ import {
 } from "@cypsela/gateway-sw-core";
 import type { Helia } from "@helia/interface";
 
+import { logErrorTree } from "./log-error.ts";
 import { createMountPolicy, type MountPolicy } from "./mount-policy.ts";
 import { createUpdateCheck, type UpdateCheck } from "./update-check.ts";
 
@@ -206,7 +207,7 @@ sw.addEventListener("message", (event) => {
       const detail = err instanceof Error ? err.message : String(err);
       const errorClass: ErrorClass = (err as { errorClass?: ErrorClass; })
         .errorClass ?? "unknown-error";
-      console.error(`[gateway] bootstrap failed for ${ensName}:`, err);
+      logErrorTree(`[gateway] bootstrap failed for ${ensName}:`, err);
       source?.postMessage({
         type: "log",
         source: "sw",
@@ -264,7 +265,7 @@ sw.addEventListener("fetch", (event) => {
         );
       }
       if (request.mode === "navigate") {
-        void updateCheck.run(ensName);
+        updateCheck.run(ensName).catch(() => {});
       }
       return response;
     } catch (err) {
