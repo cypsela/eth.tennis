@@ -2,10 +2,11 @@
 import {
   type ContentReference,
   ContentUnreachable,
-  createEnsResolver,
   createGatewayHelia,
   createIpfsFetcher,
   createIpnsResolver,
+  createRacingEnsResolver,
+  createRankedEnsResolver,
   createSiteMountStore,
   type ErrorClass,
   fetchReference,
@@ -57,6 +58,7 @@ function extractEnsName(host: string): string | null {
 interface Runtime {
   helia: Helia;
   handlers: Handlers;
+  bootstrapHandlers: Handlers;
   policy: MountPolicy;
   updateCheck: UpdateCheck;
 }
@@ -67,12 +69,15 @@ async function createRuntime(): Promise<Runtime> {
   const helia = await createGatewayHelia({ namespace: GATEWAY_DOMAIN });
   const store = createSiteMountStore(helia.datastore);
   const policy = createMountPolicy({ store, helia });
+  const ipns = createIpnsResolver(helia as never);
+  const ipfs = await createIpfsFetcher({ helia });
   const handlers: Handlers = {
-    resolvers: {
-      ens: createEnsResolver({ rpcUrls: RPC_URLS }),
-      ipns: createIpnsResolver(helia as never),
-    },
-    fetchers: { ipfs: await createIpfsFetcher({ helia }) },
+    resolvers: { ens: createRankedEnsResolver({ rpcUrls: RPC_URLS }), ipns },
+    fetchers: { ipfs },
+  };
+  const bootstrapHandlers: Handlers = {
+    resolvers: { ens: createRacingEnsResolver({ rpcUrls: RPC_URLS }), ipns },
+    fetchers: { ipfs },
   };
   const updateCheck = createUpdateCheck({
     helia,
@@ -80,7 +85,7 @@ async function createRuntime(): Promise<Runtime> {
     policy,
     ttlMs: 5 * 60_000,
   });
-  return { helia, handlers, policy, updateCheck };
+  return { helia, handlers, bootstrapHandlers, policy, updateCheck };
 }
 
 async function getRuntime(): Promise<Runtime> {
@@ -141,7 +146,7 @@ sw.addEventListener("message", (event) => {
   const source = event.source as Client | null;
   event.waitUntil((async () => {
     try {
-      const { handlers, helia, policy } = await getRuntime();
+      const { bootstrapHandlers, helia, policy } = await getRuntime();
       const { fetchRootThenDrain } = await import("./pinning.ts");
       const { resolveReference } = await import("@cypsela/gateway-sw-core");
       source?.postMessage({
@@ -164,7 +169,7 @@ sw.addEventListener("message", (event) => {
           glyph: "↳",
           text: `${formatRef(from as never)} → ${formatRef(to as never)}`,
         });
-      const fresh = await resolveReference(start, handlers, { onHop });
+      const fresh = await resolveReference(start, bootstrapHandlers, { onHop });
       source?.postMessage({
         type: "log",
         source: "sw",
