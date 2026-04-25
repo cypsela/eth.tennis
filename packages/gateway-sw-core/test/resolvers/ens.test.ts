@@ -54,14 +54,16 @@ describe("ens resolver", () => {
       .toBeInstanceOf(ContenthashNotFound);
   });
 
-  test("empty decoded → EnsResolveFailed", async () => {
+  test("empty decoded → EnsResolveFailed (no cause)", async () => {
     mocked.mockResolvedValueOnce({ protocolType: "ipfs", decoded: "" });
     const r = createEnsResolverFromClient(client);
-    await expect(
-      r.resolve({ kind: "address", protocol: "ens", value: "empty.eth" }),
-    )
-      .rejects
-      .toBeInstanceOf(EnsResolveFailed);
+    try {
+      await r.resolve({ kind: "address", protocol: "ens", value: "empty.eth" });
+      throw new Error("expected resolve to throw");
+    } catch (err) {
+      expect(err).toBeInstanceOf(EnsResolveFailed);
+      expect((err as { cause?: unknown; }).cause).toBeUndefined();
+    }
   });
 
   test("non ipfs/ipns protocol → UnsupportedProtocol", async () => {
