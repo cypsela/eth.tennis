@@ -1,6 +1,7 @@
 import { describe, expect, test, vi } from "vitest";
 import {
   EnsNotFound,
+  EnsResolveFailed,
   NoContenthash,
   UnsupportedProtocol,
 } from "../../src/errors.js";
@@ -71,5 +72,18 @@ describe("ens resolver", () => {
     )
       .rejects
       .toBeInstanceOf(UnsupportedProtocol);
+  });
+
+  test("getContentHashRecord rejection → EnsResolveFailed wraps cause", async () => {
+    const cause = new Error("rpc unreachable");
+    mocked.mockRejectedValueOnce(cause);
+    const r = createEnsResolverFromClient(client);
+    try {
+      await r.resolve({ kind: "address", protocol: "ens", value: "x.eth" });
+      throw new Error("expected resolve to throw");
+    } catch (err) {
+      expect(err).toBeInstanceOf(EnsResolveFailed);
+      expect((err as { cause?: unknown; }).cause).toBe(cause);
+    }
   });
 });
