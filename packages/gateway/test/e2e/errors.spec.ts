@@ -73,17 +73,20 @@ test.describe("error paths", () => {
       .toBeVisible({ timeout: 10_000 });
   });
 
-  test("rpc-down when RPC returns 503", async ({ page, context }) => {
+  test("ens-resolve-failed when RPC returns 503", async ({ page, context }) => {
     await context.route("https://cloudflare-eth.com/**", async (route) => {
       await route.fulfill({ status: 503 });
     });
     await page.goto("http://vitalik.eth.tennis.localhost:5173/");
     await expect(
-      page.locator(".line.level-error").filter({ hasText: "rpc-down" }).or(
-        page
-          .locator(".line.level-error")
-          .filter({ hasText: "content-unreachable" }),
-      ),
+      page
+        .locator(".line.level-error")
+        .filter({ hasText: "ens-resolve-failed" })
+        .or(
+          page.locator(".line.level-error").filter({
+            hasText: "content-unreachable",
+          }),
+        ),
     )
       .toBeVisible({ timeout: 10_000 });
   });

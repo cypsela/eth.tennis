@@ -6,8 +6,8 @@ import { mainnet } from "viem/chains";
 
 import {
   EnsNotFound,
+  EnsResolveFailed,
   NoContenthash,
-  RpcDown,
   UnsupportedProtocol,
 } from "../errors.js";
 import type { AddressReference, Reference, Resolver } from "../types.js";
@@ -78,7 +78,7 @@ export function createEnsResolver(opts: EnsResolverOpts): Resolver<"ens"> {
       const detail = errors
         .map((e) => e instanceof Error ? e.message : String(e))
         .join("; ");
-      throw new RpcDown(
+      throw new EnsResolveFailed(
         ref.value,
         new Error(`all ${errors.length} rpc(s) failed: ${detail}`),
       );
@@ -96,7 +96,7 @@ export function createEnsResolverFromClient(
       try {
         record = await getContentHashRecord(client, { name: ref.value });
       } catch (cause) {
-        throw new RpcDown(ref.value, cause);
+        throw new EnsResolveFailed(ref.value, cause);
       }
       return decodeRecord(ref.value, record);
     },

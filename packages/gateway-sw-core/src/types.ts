@@ -21,7 +21,7 @@ export type ErrorClass =
   | "ipns-record-unverifiable"
   | "ipns-resolve-failed"
   | "content-unreachable"
-  | "rpc-down"
+  | "ens-resolve-failed"
   | "unknown-error";
 
 /** Message bootstrap → SW. */

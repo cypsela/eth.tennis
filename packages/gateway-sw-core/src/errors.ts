@@ -51,15 +51,10 @@ export class IpnsRecordUnverifiable extends GatewayError {
   }
 }
 
-export class RpcDown extends GatewayError {
-  readonly errorClass = "rpc-down" as const;
+export class EnsResolveFailed extends GatewayError {
+  readonly errorClass = "ens-resolve-failed" as const;
   constructor(ensName: string, cause?: unknown) {
-    const causeMsg = cause instanceof Error
-      ? cause.message
-      : cause != null
-      ? String(cause)
-      : "";
-    super(ensName, causeMsg ? `rpc down: ${causeMsg}` : "rpc down");
+    super(ensName, "could not resolve ens name");
     if (cause !== undefined) {
       (this as { cause?: unknown; }).cause = cause;
     }

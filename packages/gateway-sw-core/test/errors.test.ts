@@ -1,11 +1,11 @@
 import { describe, expect, test } from "vitest";
 import {
   EnsNotFound,
+  EnsResolveFailed,
   GatewayError,
   IpnsRecordNotFound,
   IpnsRecordUnverifiable,
   NoContenthash,
-  RpcDown,
   UnsupportedProtocol,
 } from "../src/errors.js";
 
@@ -22,7 +22,9 @@ describe("GatewayError subclasses", () => {
     expect(new IpnsRecordUnverifiable("vitalik.eth", "k51").errorClass).toBe(
       "ipns-record-unverifiable",
     );
-    expect(new RpcDown("vitalik.eth").errorClass).toBe("rpc-down");
+    expect(new EnsResolveFailed("vitalik.eth").errorClass).toBe(
+      "ens-resolve-failed",
+    );
   });
 
   test("subclasses extend GatewayError", () => {
