@@ -95,5 +95,5 @@ content-SW interop, scope boundaries — in
 
 v1 in active development. End-to-end working: `ipfs://` contenthashes,
 libp2p-key `ipns://` contenthashes, subnames, CCIP-read. Known limitations
-(`ipns://<dnslink-name>` contenthashes, distinguishing `no-contenthash` from
-`ens-not-found`, fetch timeouts) are tracked against the spec.
+(`ipns://<dnslink-name>` contenthashes, fetch timeouts) are tracked against
+the spec.
