@@ -25,7 +25,8 @@
   "pnpm": {
     "onlyBuiltDependencies": [
       "dprint",
-      "esbuild"
+      "esbuild",
+      "node-datachannel"
     ]
   }
 }
