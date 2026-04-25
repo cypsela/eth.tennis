@@ -2,7 +2,6 @@ import { describe, expect, test } from "vitest";
 import {
   EnsNotFound,
   GatewayError,
-  httpStatusFor,
   IpnsRecordNotFound,
   IpnsRecordUnverifiable,
   NoContenthash,
@@ -31,17 +30,6 @@ describe("GatewayError subclasses", () => {
   });
 });
 
-describe("httpStatusFor", () => {
-  test("maps each error class to its spec status", () => {
-    expect(httpStatusFor("ens-not-found")).toBe(404);
-    expect(httpStatusFor("no-contenthash")).toBe(404);
-    expect(httpStatusFor("unsupported-protocol")).toBe(415);
-    expect(httpStatusFor("ipns-record-not-found")).toBe(404);
-    expect(httpStatusFor("ipns-record-unverifiable")).toBe(502);
-    expect(httpStatusFor("rpc-down")).toBe(503);
-  });
-});
-
 import { NoHandler, ResolutionLoop } from "../src/errors.js";
 
 describe("NoHandler", () => {
@@ -67,13 +55,6 @@ describe("ResolutionLoop", () => {
     expect(err.start).toBe(start);
     expect(err.maxHops).toBe(8);
     expect(err.message).toContain("8");
-  });
-});
-
-describe("httpStatusFor new classes", () => {
-  test("no-handler → 501, resolution-loop → 508", () => {
-    expect(httpStatusFor("no-handler")).toBe(501);
-    expect(httpStatusFor("resolution-loop")).toBe(508);
   });
 });
 

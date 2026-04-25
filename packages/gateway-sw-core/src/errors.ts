@@ -146,24 +146,3 @@ export class UnknownError extends GatewayError {
     }
   }
 }
-
-const STATUS: Record<ErrorClass, number> = {
-  "sw-unsupported": 500,
-  "sw-register-failed": 500,
-  "sw-activation-timeout": 504,
-  "ens-not-found": 404,
-  "no-contenthash": 404,
-  "unsupported-protocol": 415,
-  "no-handler": 501,
-  "resolution-loop": 508,
-  "ipns-record-not-found": 404,
-  "ipns-record-unverifiable": 502,
-  "ipns-resolve-failed": 502,
-  "content-unreachable": 502,
-  "rpc-down": 503,
-  "unknown-error": 500,
-};
-
-export function httpStatusFor(errorClass: ErrorClass): number {
-  return STATUS[errorClass];
-}
