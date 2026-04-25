@@ -1,7 +1,11 @@
 import { type IPNSResolver, ipnsResolver } from "@helia/ipns";
 import { CID } from "multiformats/cid";
 
-import { IpnsRecordNotFound, IpnsRecordUnverifiable } from "../errors.js";
+import {
+  IpnsRecordNotFound,
+  IpnsRecordUnverifiable,
+  IpnsResolveFailed,
+} from "../errors.js";
 import type { AddressReference, ContentReference, Resolver } from "../types.js";
 
 export interface IpnsResolverComponents {
@@ -43,7 +47,7 @@ export function createIpnsResolverFromImpl(
         ) {
           throw new IpnsRecordUnverifiable(ref.value, ref.value, cause);
         }
-        throw cause;
+        throw new IpnsResolveFailed(ref.value, ref.value, cause);
       }
     },
   };

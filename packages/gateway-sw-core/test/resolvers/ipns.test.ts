@@ -2,6 +2,7 @@ import { describe, expect, test, vi } from "vitest";
 import {
   IpnsRecordNotFound,
   IpnsRecordUnverifiable,
+  IpnsResolveFailed,
 } from "../../src/errors.js";
 import { createIpnsResolverFromImpl } from "../../src/resolvers/ipns.js";
 
@@ -66,7 +67,7 @@ describe("ipns resolver", () => {
       .toBeInstanceOf(IpnsRecordUnverifiable);
   });
 
-  test("unknown errors propagate unchanged", async () => {
+  test("unknown errors are wrapped in IpnsResolveFailed", async () => {
     const resolver = {
       resolve: vi.fn(async () => {
         throw new Error("something else");
@@ -77,6 +78,24 @@ describe("ipns resolver", () => {
       r.resolve({ kind: "address", protocol: "ipns", value: IPNS_KEY }),
     )
       .rejects
-      .toThrow("something else");
+      .toBeInstanceOf(IpnsResolveFailed);
+  });
+
+  test("IpnsResolveFailed wrap preserves the original cause message", async () => {
+    const original = new Error("offline");
+    const resolver = {
+      resolve: vi.fn(async () => {
+        throw original;
+      }),
+    } as any;
+    const r = createIpnsResolverFromImpl(resolver);
+    await expect(
+      r.resolve({ kind: "address", protocol: "ipns", value: IPNS_KEY }),
+    )
+      .rejects
+      .toMatchObject({
+        cause: original,
+        message: expect.stringContaining("offline"),
+      });
   });
 });
