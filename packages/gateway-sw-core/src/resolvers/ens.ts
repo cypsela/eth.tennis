@@ -1,7 +1,7 @@
 import { addEnsContracts } from "@ensdomains/ensjs";
 import type { ClientWithEns } from "@ensdomains/ensjs/contracts";
 import { getContentHashRecord } from "@ensdomains/ensjs/public";
-import { createPublicClient, http } from "viem";
+import { createPublicClient, fallback, http } from "viem";
 import { mainnet } from "viem/chains";
 
 import {
@@ -132,6 +132,20 @@ export function createRacingEnsResolver(
             .map((c) => getContentHashRecord(c, { name: ref.value }))));
     },
   };
+}
+
+export function createRankedEnsResolver(
+  opts: EnsResolverOpts,
+): Resolver<"ens"> {
+  const chain = addEnsContracts(mainnet);
+  const transports = opts.rpcUrls.map((url) =>
+    http(url, { timeout: 4000, retryCount: 1 })
+  );
+  const client = createPublicClient({
+    chain,
+    transport: fallback(transports, { rank: true }),
+  });
+  return createEnsResolverFromClient(client);
 }
 
 function decodeRecord(
