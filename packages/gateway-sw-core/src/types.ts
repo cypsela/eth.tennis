@@ -19,7 +19,10 @@ export type ErrorClass =
   | "resolution-loop"
   | "ipns-record-not-found"
   | "ipns-record-unverifiable"
-  | "rpc-down";
+  | "ipns-resolve-failed"
+  | "content-unreachable"
+  | "rpc-down"
+  | "unknown-error";
 
 /** Message bootstrap → SW. */
 export type BootstrapToSw = {

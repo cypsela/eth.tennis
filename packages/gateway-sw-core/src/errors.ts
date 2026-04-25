@@ -90,6 +90,63 @@ export class ResolutionLoop extends GatewayError {
   }
 }
 
+export class IpnsResolveFailed extends GatewayError {
+  readonly errorClass = "ipns-resolve-failed" as const;
+  constructor(
+    ensName: string,
+    public readonly ipnsName: string,
+    cause?: unknown,
+  ) {
+    const causeMsg = cause instanceof Error
+      ? cause.message
+      : cause != null
+      ? String(cause)
+      : "";
+    super(
+      ensName,
+      causeMsg
+        ? `ipns resolve failed (${ipnsName}): ${causeMsg}`
+        : `ipns resolve failed: ${ipnsName}`,
+    );
+    if (cause !== undefined) {
+      (this as { cause?: unknown; }).cause = cause;
+    }
+  }
+}
+
+export class ContentUnreachable extends GatewayError {
+  readonly errorClass = "content-unreachable" as const;
+  constructor(ensName: string, cause?: unknown) {
+    const causeMsg = cause instanceof Error
+      ? cause.message
+      : cause != null
+      ? String(cause)
+      : "";
+    super(
+      ensName,
+      causeMsg ? `content unreachable: ${causeMsg}` : "content unreachable",
+    );
+    if (cause !== undefined) {
+      (this as { cause?: unknown; }).cause = cause;
+    }
+  }
+}
+
+export class UnknownError extends GatewayError {
+  readonly errorClass = "unknown-error" as const;
+  constructor(ensName: string, cause?: unknown) {
+    const causeMsg = cause instanceof Error
+      ? cause.message
+      : cause != null
+      ? String(cause)
+      : "";
+    super(ensName, causeMsg ? `unknown error: ${causeMsg}` : "unknown error");
+    if (cause !== undefined) {
+      (this as { cause?: unknown; }).cause = cause;
+    }
+  }
+}
+
 const STATUS: Record<ErrorClass, number> = {
   "sw-unsupported": 500,
   "sw-register-failed": 500,
@@ -101,7 +158,10 @@ const STATUS: Record<ErrorClass, number> = {
   "resolution-loop": 508,
   "ipns-record-not-found": 404,
   "ipns-record-unverifiable": 502,
+  "ipns-resolve-failed": 502,
+  "content-unreachable": 502,
   "rpc-down": 503,
+  "unknown-error": 500,
 };
 
 export function httpStatusFor(errorClass: ErrorClass): number {

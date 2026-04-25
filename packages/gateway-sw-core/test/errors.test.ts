@@ -76,3 +76,58 @@ describe("httpStatusFor new classes", () => {
     expect(httpStatusFor("resolution-loop")).toBe(508);
   });
 });
+
+import {
+  ContentUnreachable,
+  IpnsResolveFailed,
+  UnknownError,
+} from "../src/errors.js";
+
+describe("IpnsResolveFailed", () => {
+  test("carries 'ipns-resolve-failed' errorClass and ipns name in message", () => {
+    const err = new IpnsResolveFailed("vitalik.eth", "k51");
+    expect(err.errorClass).toBe("ipns-resolve-failed");
+    expect(err.ensName).toBe("vitalik.eth");
+    expect(err.message).toContain("k51");
+  });
+
+  test("preserves cause and includes its message", () => {
+    const cause = new Error("offline");
+    const err = new IpnsResolveFailed("vitalik.eth", "k51", cause);
+    expect((err as { cause?: unknown; }).cause).toBe(cause);
+    expect(err.message).toContain("offline");
+  });
+
+  test("extends GatewayError", () => {
+    expect(new IpnsResolveFailed("x", "k51") instanceof GatewayError).toBe(
+      true,
+    );
+  });
+});
+
+describe("ContentUnreachable", () => {
+  test("carries 'content-unreachable' errorClass", () => {
+    const err = new ContentUnreachable("vitalik.eth");
+    expect(err.errorClass).toBe("content-unreachable");
+    expect(err.ensName).toBe("vitalik.eth");
+  });
+
+  test("includes cause message when provided", () => {
+    const cause = new Error("Unable to fetch raw block for CID bafy");
+    const err = new ContentUnreachable("vitalik.eth", cause);
+    expect((err as { cause?: unknown; }).cause).toBe(cause);
+    expect(err.message).toContain("Unable to fetch raw block");
+  });
+});
+
+describe("UnknownError", () => {
+  test("carries 'unknown-error' errorClass", () => {
+    const err = new UnknownError("vitalik.eth");
+    expect(err.errorClass).toBe("unknown-error");
+  });
+
+  test("includes cause message when provided", () => {
+    const err = new UnknownError("vitalik.eth", new Error("boom"));
+    expect(err.message).toContain("boom");
+  });
+});
