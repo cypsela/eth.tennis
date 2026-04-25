@@ -7,7 +7,7 @@ import {
   type Reference,
   resolveReference,
 } from "@cypsela/gateway-sw-core";
-import type { Helia } from "helia";
+import type { Helia } from "@helia/interface";
 import { CID } from "multiformats/cid";
 
 import type { MountPolicy } from "./mount-policy.ts";

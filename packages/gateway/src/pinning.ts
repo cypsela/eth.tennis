@@ -1,4 +1,4 @@
-import type { Helia } from "helia";
+import type { Helia } from "@helia/interface";
 import type { CID } from "multiformats/cid";
 
 export interface PinHooks {

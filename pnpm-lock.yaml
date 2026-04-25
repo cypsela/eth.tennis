@@ -26,6 +26,9 @@ importers:
       '@cypsela/gateway-sw-core':
         specifier: workspace:*
         version: link:../gateway-sw-core
+      '@helia/interface':
+        specifier: ^6.2.1
+        version: 6.2.1
       datastore-idb:
         specifier: ^4.0.3
         version: 4.0.3

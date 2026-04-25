@@ -14,7 +14,7 @@ import {
   formatRef,
   type Handlers,
 } from "@cypsela/gateway-sw-core";
-import type { Helia } from "helia";
+import type { Helia } from "@helia/interface";
 
 import { createMountPolicy, type MountPolicy } from "./mount-policy.ts";
 import { createUpdateCheck, type UpdateCheck } from "./update-check.ts";
