@@ -2,6 +2,7 @@
 import {
   type ContentFetcher,
   type ContentReference,
+  ContentUnreachable,
   createEnsResolver,
   createGatewayHelia,
   createIpfsFetcher,
@@ -210,17 +211,21 @@ sw.addEventListener("message", (event) => {
         text: `fetching ${formatRef(fresh)}`,
       });
       const { CID } = await import("multiformats/cid");
-      await fetchRootThenDrain(helia, CID.parse(fresh.value), {
-        onSuccess: () =>
-          console.info(
-            `[gateway] ${ensName} fully pinned (${formatRef(fresh)})`,
-          ),
-        onFailure: (err) =>
-          console.warn(
-            `[gateway] pin walk did not complete for ${ensName}`,
-            err,
-          ),
-      });
+      try {
+        await fetchRootThenDrain(helia, CID.parse(fresh.value), {
+          onSuccess: () =>
+            console.info(
+              `[gateway] ${ensName} fully pinned (${formatRef(fresh)})`,
+            ),
+          onFailure: (err) =>
+            console.warn(
+              `[gateway] pin walk did not complete for ${ensName}`,
+              err,
+            ),
+        });
+      } catch (cause) {
+        throw new ContentUnreachable(ensName, cause);
+      }
       await policy.writeCurrent(fresh, { lastChecked: Date.now() });
       source?.postMessage({
         type: "log",
@@ -233,7 +238,7 @@ sw.addEventListener("message", (event) => {
     } catch (err) {
       const detail = err instanceof Error ? err.message : String(err);
       const errorClass: ErrorClass = (err as { errorClass?: ErrorClass; })
-        .errorClass ?? "rpc-down";
+        .errorClass ?? "unknown-error";
       console.error(`[gateway] bootstrap failed for ${ensName}:`, err);
       source?.postMessage({
         type: "log",
