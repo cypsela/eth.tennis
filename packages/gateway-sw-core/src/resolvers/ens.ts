@@ -86,19 +86,29 @@ export function createEnsResolver(opts: EnsResolverOpts): Resolver<"ens"> {
   };
 }
 
+type EnsRecord = Awaited<ReturnType<typeof getContentHashRecord>>;
+
+async function lookupAndDecode(
+  ensName: string,
+  lookup: () => Promise<EnsRecord>,
+): Promise<Reference> {
+  let record: EnsRecord;
+  try {
+    record = await lookup();
+  } catch (cause) {
+    throw new EnsResolveFailed(ensName, cause);
+  }
+  return decodeRecord(ensName, record);
+}
+
 export function createEnsResolverFromClient(
   client: ClientWithEns,
 ): Resolver<"ens"> {
   return {
     protocol: "ens",
     async resolve(ref: AddressReference<"ens">): Promise<Reference> {
-      let record: Awaited<ReturnType<typeof getContentHashRecord>>;
-      try {
-        record = await getContentHashRecord(client, { name: ref.value });
-      } catch (cause) {
-        throw new EnsResolveFailed(ref.value, cause);
-      }
-      return decodeRecord(ref.value, record);
+      return lookupAndDecode(ref.value, () =>
+        getContentHashRecord(client, { name: ref.value }));
     },
   };
 }
