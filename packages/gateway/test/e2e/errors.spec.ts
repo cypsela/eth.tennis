@@ -7,15 +7,17 @@ import { expect, test } from "./setup.ts";
 test.describe("error paths", () => {
   test.use({ rpc: {}, ipfs: {} });
 
-  test("ens-not-found shows branded terminal with error line", async ({ page }) => {
+  test("contenthash-not-found shows branded terminal with error line", async ({ page }) => {
     await page.goto("http://ghost.eth.tennis.localhost:5173/");
     await expect(
-      page.locator(".line.level-error").filter({ hasText: "ens-not-found" }),
+      page.locator(".line.level-error").filter({
+        hasText: "contenthash-not-found",
+      }),
     )
       .toBeVisible({ timeout: 10_000 });
   });
 
-  test("no-contenthash when record resolves but empty", async ({ page, context }) => {
+  test("contenthash-not-found when RPC returns 0x for contenthash", async ({ page, context }) => {
     await context.route("https://cloudflare-eth.com/**", async (route) => {
       const body = await route.request().postDataJSON() as {
         id?: number | string;
@@ -31,9 +33,9 @@ test.describe("error paths", () => {
     });
     await page.goto("http://empty.eth.tennis.localhost:5173/");
     await expect(
-      page.locator(".line.level-error").filter({ hasText: "ens-not-found" }).or(
-        page.locator(".line.level-error").filter({ hasText: "no-contenthash" }),
-      ),
+      page.locator(".line.level-error").filter({
+        hasText: "contenthash-not-found",
+      }),
     )
       .toBeVisible({ timeout: 10_000 });
   });
