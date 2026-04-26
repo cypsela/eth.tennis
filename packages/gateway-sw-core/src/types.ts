@@ -12,7 +12,7 @@ export type ErrorClass =
   | "sw-unsupported"
   | "sw-register-failed"
   | "sw-activation-timeout"
-  | "contenthash-not-found"
+  | "contenthash-not-set"
   | "unsupported-protocol"
   | "no-handler"
   | "resolution-loop"

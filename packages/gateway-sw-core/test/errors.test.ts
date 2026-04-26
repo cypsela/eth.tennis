@@ -1,6 +1,6 @@
 import { describe, expect, test } from "vitest";
 import {
-  ContenthashNotFound,
+  ContentHashNotSet,
   EnsResolveFailed,
   GatewayError,
   IpnsRecordNotFound,
@@ -10,8 +10,8 @@ import {
 
 describe("GatewayError subclasses", () => {
   test("each subclass carries its error class name", () => {
-    expect(new ContenthashNotFound("vitalik.eth").errorClass).toBe(
-      "contenthash-not-found",
+    expect(new ContentHashNotSet("vitalik.eth").errorClass).toBe(
+      "contenthash-not-set",
     );
     expect(new UnsupportedProtocol("vitalik.eth", "swarm").errorClass).toBe(
       "unsupported-protocol",
@@ -28,7 +28,7 @@ describe("GatewayError subclasses", () => {
   });
 
   test("subclasses extend GatewayError", () => {
-    expect(new ContenthashNotFound("x") instanceof GatewayError).toBe(true);
+    expect(new ContentHashNotSet("x") instanceof GatewayError).toBe(true);
   });
 });
 

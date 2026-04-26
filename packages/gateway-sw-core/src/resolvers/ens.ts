@@ -5,7 +5,7 @@ import { createPublicClient, fallback, http } from "viem";
 import { mainnet } from "viem/chains";
 
 import {
-  ContenthashNotFound,
+  ContentHashNotSet,
   EnsResolveFailed,
   UnsupportedProtocol,
 } from "../errors.js";
@@ -81,7 +81,7 @@ function decodeRecord(
   ensName: string,
   record: Awaited<ReturnType<typeof getContentHashRecord>>,
 ): Reference {
-  if (record == null) throw new ContenthashNotFound(ensName);
+  if (record == null) throw new ContentHashNotSet(ensName);
   const proto = record.protocolType;
   const value = record.decoded;
   if (!value) throw new EnsResolveFailed(ensName);

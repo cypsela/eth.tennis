@@ -1,6 +1,6 @@
 import { describe, expect, test, vi } from "vitest";
 import {
-  ContenthashNotFound,
+  ContentHashNotSet,
   EnsResolveFailed,
   UnsupportedProtocol,
 } from "../../src/errors.js";
@@ -44,14 +44,14 @@ describe("ens resolver", () => {
     expect(out).toEqual({ kind: "address", protocol: "ipns", value: "k51" });
   });
 
-  test("null record → ContenthashNotFound", async () => {
+  test("null record → ContentHashNotSet", async () => {
     mocked.mockResolvedValueOnce(null);
     const r = createEnsResolverFromClient(client);
     await expect(
       r.resolve({ kind: "address", protocol: "ens", value: "ghost.eth" }),
     )
       .rejects
-      .toBeInstanceOf(ContenthashNotFound);
+      .toBeInstanceOf(ContentHashNotSet);
   });
 
   test("empty decoded → EnsResolveFailed (no cause)", async () => {
