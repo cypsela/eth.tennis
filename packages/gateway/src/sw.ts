@@ -244,30 +244,30 @@ sw.addEventListener("message", (event) => {
   })());
 });
 
-void getRuntime().then((runtime) => {
-  installContentSw({
-    scope: sw,
-    readSwState: () => runtime.swStateCache.value,
-    writeSwState: async (state) => {
-      runtime.swStateCache.value = state;
-      await runtime.policy.writeSwState(state);
-    },
-    fetchSwScript: async (url) => {
-      const mount = await runtime.policy.read();
-      if (!mount.current) throw new Error("no current mount");
-      const path = new URL(url, sw.location.origin).pathname;
-      const resp = await fetchReference(
-        mount.current.ref,
-        path,
-        runtime.handlers,
-      );
-      if (!resp.ok) {
-        throw new Error(`fetchSwScript ${url} → ${resp.status}`);
-      }
-      return new Uint8Array(await resp.arrayBuffer());
-    },
-    defaultFetch: (event) => gatewayDefaultFetch(event, runtime),
-  });
+installContentSw({
+  scope: sw,
+  readSwState: async () => (await getRuntime()).swStateCache.value,
+  writeSwState: async (state) => {
+    const runtime = await getRuntime();
+    runtime.swStateCache.value = state;
+    await runtime.policy.writeSwState(state);
+  },
+  fetchSwScript: async (url) => {
+    const runtime = await getRuntime();
+    const mount = await runtime.policy.read();
+    if (!mount.current) throw new Error("no current mount");
+    const path = new URL(url, sw.location.origin).pathname;
+    const resp = await fetchReference(
+      mount.current.ref,
+      path,
+      runtime.handlers,
+    );
+    if (!resp.ok) {
+      throw new Error(`fetchSwScript ${url} → ${resp.status}`);
+    }
+    return new Uint8Array(await resp.arrayBuffer());
+  },
+  defaultFetch: async (event) => gatewayDefaultFetch(event, await getRuntime()),
 });
 
 async function gatewayDefaultFetch(

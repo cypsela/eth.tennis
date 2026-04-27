@@ -13,7 +13,7 @@ import { fireActivate, fireInstall } from "./synth-events.js";
 
 export interface ContentSwIntegration {
   scope: ServiceWorkerGlobalScope;
-  readSwState(): SwState | null;
+  readSwState(): SwState | null | Promise<SwState | null>;
   writeSwState(state: SwState): Promise<void>;
   fetchSwScript: (url: string) => Promise<Uint8Array>;
   defaultFetch: (event: FetchEvent) => Promise<Response>;
@@ -44,18 +44,19 @@ export function installContentSw(integration: ContentSwIntegration): void {
     );
   });
 
-  const existing = integration.readSwState();
-  if (existing && existing.swInstalled && existing.swActivated) {
-    void rehydrate({
-      scope,
-      dispatcher,
-      swUrl: existing.swUrl,
-      fetchSwScript: integration.fetchSwScript,
-      ...(integration.importModule
-        ? { importModule: integration.importModule }
-        : {}),
-    });
-  }
+  void Promise.resolve(integration.readSwState()).then((existing) => {
+    if (existing && existing.swInstalled && existing.swActivated) {
+      void rehydrate({
+        scope,
+        dispatcher,
+        swUrl: existing.swUrl,
+        fetchSwScript: integration.fetchSwScript,
+        ...(integration.importModule
+          ? { importModule: integration.importModule }
+          : {}),
+      });
+    }
+  });
 }
 
 async function handleAbsorb(
