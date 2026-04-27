@@ -21,24 +21,33 @@ test.describe("content-sw absorption", () => {
 
   test("first visit: register → fetch sees X-Absorbed", async ({ page }) => {
     await page.goto(`${SITE}/`);
-    await expect(page.locator("#result")).toContainText("absorbed=1;body=", {
-      timeout: 10_000,
-    });
+    await expect(page.locator("#result")).toContainText(
+      "absorbed=1;body={ \"hello\": \"world\" }",
+      { timeout: 10_000 },
+    );
   });
 
   test("same-tab navigation post-register goes through SW", async ({ page }) => {
     await page.goto(`${SITE}/`);
-    await expect(page.locator("#result")).toContainText("absorbed=1");
+    await expect(page.locator("#result")).toContainText(
+      "absorbed=1;body={ \"hello\": \"world\" }",
+    );
     await page.click("a[href=\"/page-2.html\"]");
     await expect(page.locator("#title")).toHaveText("page-2");
-    await expect(page.locator("#result")).toContainText("absorbed=1");
+    await expect(page.locator("#result")).toContainText(
+      "absorbed=1;body={ \"hello\": \"world\" }",
+    );
   });
 
   test("hard reload → bootstrap then re-absorbs", async ({ page }) => {
     await page.goto(`${SITE}/`);
-    await expect(page.locator("#result")).toContainText("absorbed=1");
+    await expect(page.locator("#result")).toContainText(
+      "absorbed=1;body={ \"hello\": \"world\" }",
+    );
     await page.reload();
-    await expect(page.locator("#result")).toContainText("absorbed=1");
+    await expect(page.locator("#result")).toContainText(
+      "absorbed=1;body={ \"hello\": \"world\" }",
+    );
   });
 
   test("failing-install variant falls through to L1 (no x-absorbed header)", async ({ page }) => {
