@@ -1,5 +1,11 @@
 /// <reference lib="webworker" />
 import {
+  installContentSw,
+  PAGE_SHIM_HASH,
+  PAGE_SHIM_SRC,
+  rewriteHtmlForContentSw,
+} from "@cypsela/gateway-content-sw";
+import {
   ContentUnreachable,
   createGatewayHelia,
   createIpfsFetcher,
@@ -11,6 +17,7 @@ import {
   fetchReference,
   formatRef,
   type Handlers,
+  type SwState,
 } from "@cypsela/gateway-sw-core";
 import type { Helia } from "@helia/interface";
 
@@ -61,6 +68,7 @@ interface Runtime {
   bootstrapHandlers: Handlers;
   policy: MountPolicy;
   updateCheck: UpdateCheck;
+  swStateCache: { value: SwState | null; };
 }
 
 let runtimeP: Promise<Runtime> | null = null;
@@ -86,6 +94,14 @@ async function createRuntime(): Promise<Runtime> {
     ttlMs: 5 * 60_000,
   });
 
+  const swStateCache: { value: SwState | null; } = { value: null };
+  try {
+    const m = await policy.read();
+    swStateCache.value = m.current?.sw ?? null;
+  } catch {
+    swStateCache.value = null;
+  }
+
   try {
     const ensName = extractEnsName(sw.location.hostname);
     if (ensName) {
@@ -103,7 +119,14 @@ async function createRuntime(): Promise<Runtime> {
     console.warn("[gateway] init: tryPromote failed", err);
   }
 
-  return { helia, handlers, bootstrapHandlers, policy, updateCheck };
+  return {
+    helia,
+    handlers,
+    bootstrapHandlers,
+    policy,
+    updateCheck,
+    swStateCache,
+  };
 }
 
 async function getRuntime(): Promise<Runtime> {
@@ -221,57 +244,85 @@ sw.addEventListener("message", (event) => {
   })());
 });
 
-sw.addEventListener("fetch", (event) => {
-  const request = event.request;
-  const url = new URL(request.url);
+void getRuntime().then((runtime) => {
+  installContentSw({
+    scope: sw,
+    readSwState: () => runtime.swStateCache.value,
+    writeSwState: async (state) => {
+      runtime.swStateCache.value = state;
+      await runtime.policy.writeSwState(state);
+    },
+    fetchSwScript: async (url) => {
+      const mount = await runtime.policy.read();
+      if (!mount.current) throw new Error("no current mount");
+      const path = new URL(url, sw.location.origin).pathname;
+      const resp = await fetchReference(
+        mount.current.ref,
+        path,
+        runtime.handlers,
+      );
+      if (!resp.ok) {
+        throw new Error(`fetchSwScript ${url} → ${resp.status}`);
+      }
+      return new Uint8Array(await resp.arrayBuffer());
+    },
+    defaultFetch: (event) => gatewayDefaultFetch(event, runtime),
+  });
+});
 
-  if (url.origin !== sw.location.origin) return;
+async function gatewayDefaultFetch(
+  event: FetchEvent,
+  runtime: Runtime,
+): Promise<Response> {
+  const url = new URL(event.request.url);
 
+  if (url.origin !== sw.location.origin) {
+    return fetch(event.request);
+  }
   if (isShellAsset(url.pathname)) {
-    event.respondWith((async () => {
-      const cache = await caches.open(CACHE_VERSION);
-      const hit = await cache.match(url.pathname);
-      if (hit) return hit.clone();
-      return fetch(request);
-    })());
-    return;
+    const cache = await caches.open(CACHE_VERSION);
+    const hit = await cache.match(url.pathname);
+    if (hit) return hit.clone();
+    return fetch(event.request);
   }
 
   const ensName = extractEnsName(url.hostname);
-  if (!ensName) return;
+  if (!ensName) return fetch(event.request);
 
-  event.respondWith((async () => {
-    try {
-      const { handlers, policy, updateCheck } = await getRuntime();
-      const mount = await policy.read();
-      if (!mount.current) {
-        const cache = await caches.open(CACHE_VERSION);
-        const shell = await cache.match("/");
-        return shell?.clone() ?? fetch("/");
-      }
-      const response = await fetchReference(
-        mount.current.ref,
-        url.pathname,
-        handlers,
-      );
-      if (response.status === 412 || response.status === 504) {
-        console.warn(
-          `[gateway] block unreachable: ${
-            formatRef(
-              mount
-                .current
-                .ref,
-            )
-          }${url.pathname} (${response.status})`,
-        );
-      }
-      if (request.mode === "navigate") {
-        updateCheck.run(ensName).catch(() => {});
-      }
-      return response;
-    } catch (err) {
-      console.error(err);
-      return new Response(String(err), { status: 500 });
-    }
-  })());
-});
+  const mount = await runtime.policy.read();
+  if (!mount.current) {
+    const cache = await caches.open(CACHE_VERSION);
+    const shell = await cache.match("/");
+    return shell?.clone() ?? fetch("/");
+  }
+
+  let response: Response;
+  try {
+    response = await fetchReference(
+      mount.current.ref,
+      url.pathname,
+      runtime.handlers,
+    );
+  } catch (err) {
+    console.error(err);
+    return new Response(String(err), { status: 500 });
+  }
+  if (response.status === 412 || response.status === 504) {
+    console.warn(
+      `[gateway] block unreachable: ${
+        formatRef(
+          mount
+            .current
+            .ref,
+        )
+      }${url.pathname} (${response.status})`,
+    );
+  }
+  if (event.request.mode === "navigate") {
+    runtime.updateCheck.run(ensName).catch(() => {});
+  }
+  return rewriteHtmlForContentSw(response, {
+    pageShimSrc: PAGE_SHIM_SRC,
+    pageShimHash: PAGE_SHIM_HASH,
+  });
+}
