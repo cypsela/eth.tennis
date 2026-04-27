@@ -267,6 +267,13 @@ installContentSw({
     }
     return new Uint8Array(await resp.arrayBuffer());
   },
+  sameOriginFetch: async (req) => {
+    const runtime = await getRuntime();
+    const mount = await runtime.policy.read();
+    if (!mount.current) throw new Error("no current mount");
+    const path = new URL(req.url).pathname;
+    return fetchReference(mount.current.ref, path, runtime.handlers);
+  },
   defaultFetch: async (event) => gatewayDefaultFetch(event, await getRuntime()),
 });
 
