@@ -22,7 +22,7 @@ describe("mount-policy", () => {
     const { policy } = makePolicy();
     await policy.writeCurrent(refOf("bafyA"));
     const mount = await policy.read();
-    expect(mount.current?.value).toBe("bafyA");
+    expect(mount.current?.ref.value).toBe("bafyA");
     expect(mount.pending).toBe(null);
   });
 
@@ -46,7 +46,7 @@ describe("mount-policy", () => {
     await policy.writeCurrent(refOf("bafyA"));
     await policy.writePending(refOf("bafyB"));
     const mount = await policy.read();
-    expect(mount.current?.value).toBe("bafyA");
+    expect(mount.current?.ref.value).toBe("bafyA");
     expect(mount.pending?.value).toBe("bafyB");
   });
 
@@ -58,7 +58,7 @@ describe("mount-policy", () => {
       ensName: "x.eth",
     });
     expect(helia.pins.rm).not.toHaveBeenCalled();
-    expect((await policy.read()).current?.value).toBe("bafyA");
+    expect((await policy.read()).current?.ref.value).toBe("bafyA");
   });
 
   test("tryPromote no-ops when a window exists", async () => {
@@ -71,7 +71,7 @@ describe("mount-policy", () => {
     });
     expect(helia.pins.rm).not.toHaveBeenCalled();
     const mount = await policy.read();
-    expect(mount.current?.value).toBe("bafyA");
+    expect(mount.current?.ref.value).toBe("bafyA");
     expect(mount.pending?.value).toBe("bafyB");
   });
 
@@ -84,7 +84,7 @@ describe("mount-policy", () => {
       ensName: "x.eth",
     });
     const mount = await policy.read();
-    expect(mount.current?.value).toBe(CID_B);
+    expect(mount.current?.ref.value).toBe(CID_B);
     expect(mount.pending).toBe(null);
     expect(helia.pins.rm).toHaveBeenCalledTimes(1);
   });
@@ -105,6 +105,26 @@ describe("mount-policy", () => {
       clients: { matchAll: vi.fn(async () => []) } as any,
       ensName: "x.eth",
     });
-    expect((await policy.read()).current?.value).toBe(CID_B);
+    expect((await policy.read()).current?.ref.value).toBe(CID_B);
+  });
+
+  test("tryPromote drops sw state when promoting (new mount has no SW yet)", async () => {
+    const { policy, helia, store } = makePolicy();
+    await store.write({
+      current: {
+        ref: refOf(CID_A),
+        sw: { swUrl: "/sw.js", swInstalled: true, swActivated: true },
+      },
+      pending: refOf(CID_B),
+      lastChecked: 0,
+    });
+    await policy.tryPromote({
+      clients: { matchAll: vi.fn(async () => []) } as any,
+      ensName: "x.eth",
+    });
+    const mount = await policy.read();
+    expect(mount.current?.ref.value).toBe(CID_B);
+    expect(mount.current?.sw).toBe(null);
+    expect(helia.pins.rm).toHaveBeenCalledTimes(1);
   });
 });

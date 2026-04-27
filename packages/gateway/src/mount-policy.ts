@@ -47,7 +47,7 @@ export function createMountPolicy(opts: MountPolicyOpts): MountPolicy {
   ): Promise<void> {
     const prev = await store.read();
     await store.write({
-      current: ref,
+      current: { ref, sw: null },
       pending: null,
       lastChecked: writeOpts?.lastChecked ?? prev.lastChecked,
     });
@@ -82,10 +82,10 @@ export function createMountPolicy(opts: MountPolicyOpts): MountPolicy {
     if (!prev.pending) return null;
     const windows = await args.clients.matchAll({ type: "window" });
     if (windows.length > 0) return null;
-    const oldCurrent = prev.current;
+    const oldCurrent = prev.current?.ref ?? null;
     const newCurrent = prev.pending;
     await store.write({
-      current: newCurrent,
+      current: { ref: newCurrent, sw: null },
       pending: null,
       lastChecked: prev.lastChecked,
     });
