@@ -1,6 +1,5 @@
 /// <reference lib="webworker" />
 import {
-  type ContentReference,
   ContentUnreachable,
   createGatewayHelia,
   createIpfsFetcher,
@@ -253,14 +252,18 @@ sw.addEventListener("fetch", (event) => {
         return shell?.clone() ?? fetch("/");
       }
       const response = await fetchReference(
-        mount.current,
+        mount.current.ref,
         url.pathname,
         handlers,
       );
       if (response.status === 412 || response.status === 504) {
         console.warn(
           `[gateway] block unreachable: ${
-            formatRef(mount.current as ContentReference)
+            formatRef(
+              mount
+                .current
+                .ref,
+            )
           }${url.pathname} (${response.status})`,
         );
       }

@@ -49,7 +49,7 @@ export function createUpdateCheck(opts: UpdateCheckOpts): UpdateCheck {
     }
 
     const mount = await opts.policy.read();
-    const latest = mount.pending ?? mount.current;
+    const latest = mount.pending ?? mount.current?.ref ?? null;
     if (latest && fresh.value === latest.value) return fresh;
 
     console.info(`[gateway] ${ensName}: fetching ${formatRef(fresh)}`);
