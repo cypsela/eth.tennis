@@ -63,7 +63,7 @@ describe("evaluateSwModule", () => {
       .toThrow(/eval-boom/);
   });
 
-  test("passes bytes, self, and fetch shim to importModule", async () => {
+  test("passes bytes, self (Proxy), and fetch shim to importModule", async () => {
     const { scope } = makeMockScope();
     const shim = vi.fn(async () =>
       new Response()
@@ -78,7 +78,9 @@ describe("evaluateSwModule", () => {
     const bytes = new TextEncoder().encode("self.x = 1;");
     await evaluateSwModule({ bytes, scope, shim, importModule: fakeImport });
     expect(fakeImport.mock.calls[0]![0]).toBe(bytes);
-    expect(fakeImport.mock.calls[0]![1]).toBe(scope);
+    // self is a Proxy over scope, not scope itself, but property reads are transparent:
+    expect(fakeImport.mock.calls[0]![1]).not.toBe(scope);
+    expect(fakeImport.mock.calls[0]![1].location).toBe(scope.location);
     expect(fakeImport.mock.calls[0]![2]).toBe(shim);
   });
 
@@ -93,6 +95,90 @@ describe("evaluateSwModule", () => {
       shim: scope.fetch,
     });
     expect(captured.fetch.length).toBe(1);
+  });
+
+  test("Proxy: native methods bound to scope (this === scope)", async () => {
+    const { scope } = makeMockScope();
+    const skipSpy = vi.fn(async () => undefined);
+    (scope as unknown as { skipWaiting: typeof skipSpy; }).skipWaiting =
+      skipSpy;
+    const importModule = async (
+      _bytes: Uint8Array,
+      self: ServiceWorkerGlobalScope,
+      _fetch: typeof globalThis.fetch,
+    ) => {
+      await self.skipWaiting();
+    };
+    await evaluateSwModule({
+      bytes: new Uint8Array(),
+      scope,
+      shim: scope.fetch,
+      importModule,
+    });
+    expect(skipSpy).toHaveBeenCalledTimes(1);
+  });
+
+  test("Proxy: assigning to self.fetch is silently ignored; subsequent reads still return shim", async () => {
+    const { scope } = makeMockScope();
+    const shim = vi.fn(async () => new Response("from-shim"));
+    const customFetch = vi.fn(async () => new Response("custom"));
+    const realScopeFetchBefore = scope.fetch;
+    let resolvedAfterAssign: typeof globalThis.fetch | null = null;
+    const importModule = async (
+      _bytes: Uint8Array,
+      self: ServiceWorkerGlobalScope,
+      _fetch: typeof globalThis.fetch,
+    ) => {
+      self.fetch = customFetch as unknown as typeof globalThis.fetch;
+      resolvedAfterAssign = self.fetch;
+    };
+    await evaluateSwModule({
+      bytes: new Uint8Array(),
+      scope,
+      shim: shim as unknown as typeof globalThis.fetch,
+      importModule,
+    });
+    expect(resolvedAfterAssign).toBe(shim);
+    expect(scope.fetch).toBe(realScopeFetchBefore);
+    expect(scope.fetch).not.toBe(customFetch);
+  });
+
+  test("Proxy: self.addEventListener still captures listeners via patched scope", async () => {
+    const { scope } = makeMockScope();
+    const importModule = async (
+      _bytes: Uint8Array,
+      self: ServiceWorkerGlobalScope,
+      _fetch: typeof globalThis.fetch,
+    ) => {
+      self.addEventListener("fetch", (e) => e.respondWith(new Response("ok")));
+    };
+    const captured = await evaluateSwModule({
+      bytes: new Uint8Array(),
+      scope,
+      shim: scope.fetch,
+      importModule,
+    });
+    expect(captured.fetch.length).toBe(1);
+  });
+
+  test("self.fetch via Proxy reaches shim", async () => {
+    const { scope } = makeMockScope();
+    const shim = vi.fn(async () => new Response("from-shim"));
+    let captured: typeof globalThis.fetch | null = null;
+    const importModule = async (
+      _bytes: Uint8Array,
+      self: ServiceWorkerGlobalScope,
+      _fetch: typeof globalThis.fetch,
+    ) => {
+      captured = self.fetch;
+    };
+    await evaluateSwModule({
+      bytes: new Uint8Array(),
+      scope,
+      shim: shim as unknown as typeof globalThis.fetch,
+      importModule,
+    });
+    expect(captured).toBe(shim);
   });
 
   test("default eval: bare fetch in absorbed module resolves to shim", async () => {

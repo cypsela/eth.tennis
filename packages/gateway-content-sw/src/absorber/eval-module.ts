@@ -35,9 +35,21 @@ export async function evaluateSwModule(
   (opts.scope as { addEventListener: typeof patched; }).addEventListener =
     patched;
 
+  const wrappedSelf = new Proxy(opts.scope, {
+    get(target, prop) {
+      if (prop === "fetch") return opts.shim;
+      const value = Reflect.get(target, prop, target);
+      return typeof value === "function" ? value.bind(target) : value;
+    },
+    set(target, prop, value) {
+      if (prop === "fetch" || prop === "addEventListener") return true;
+      return Reflect.set(target, prop, value);
+    },
+  });
+
   const importModule = opts.importModule ?? defaultImportModule;
   try {
-    await importModule(opts.bytes, opts.scope, opts.shim);
+    await importModule(opts.bytes, wrappedSelf, opts.shim);
     return captured;
   } finally {
     (opts.scope as { addEventListener: typeof original; }).addEventListener =
