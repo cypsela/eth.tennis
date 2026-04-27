@@ -108,6 +108,37 @@ describe("mount-policy", () => {
     expect((await policy.read()).current?.ref.value).toBe(CID_B);
   });
 
+  test("writeSwState rejects when current is null", async () => {
+    const { policy } = makePolicy();
+    await expect(
+      policy.writeSwState({
+        swUrl: "/s.js",
+        swInstalled: true,
+        swActivated: true,
+      }),
+    )
+      .rejects
+      .toThrow(/current must be set/i);
+  });
+
+  test("writeSwState writes sw onto current; preserves ref + pending + lastChecked", async () => {
+    const { policy } = makePolicy();
+    await policy.writeCurrent(refOf("bafyA"), { lastChecked: 99 });
+    await policy.writeSwState({
+      swUrl: "/sw.js",
+      swInstalled: true,
+      swActivated: true,
+    });
+    const mount = await policy.read();
+    expect(mount.current?.ref.value).toBe("bafyA");
+    expect(mount.current?.sw).toEqual({
+      swUrl: "/sw.js",
+      swInstalled: true,
+      swActivated: true,
+    });
+    expect(mount.lastChecked).toBe(99);
+  });
+
   test("tryPromote drops sw state when promoting (new mount has no SW yet)", async () => {
     const { policy, helia, store } = makePolicy();
     await store.write({

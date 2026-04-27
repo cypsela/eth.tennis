@@ -2,6 +2,7 @@ import type {
   ContentReference,
   SiteMount,
   SiteMountStore,
+  SwState,
 } from "@cypsela/gateway-sw-core";
 import type { Helia } from "helia";
 import { CID } from "multiformats/cid";
@@ -32,6 +33,7 @@ export interface MountPolicy {
     | { oldCurrent: ContentReference | null; newCurrent: ContentReference; }
     | null
   >;
+  writeSwState(state: SwState): Promise<void>;
 }
 
 export function createMountPolicy(opts: MountPolicyOpts): MountPolicy {
@@ -99,6 +101,20 @@ export function createMountPolicy(opts: MountPolicyOpts): MountPolicy {
     return { oldCurrent, newCurrent };
   }
 
+  async function writeSwState(state: SwState): Promise<void> {
+    const prev = await store.read();
+    if (!prev.current) {
+      throw new Error(
+        "mount-policy: current must be set before writing sw state",
+      );
+    }
+    await store.write({
+      current: { ref: prev.current.ref, sw: state },
+      pending: prev.pending,
+      lastChecked: prev.lastChecked,
+    });
+  }
+
   return {
     read,
     writeCurrent,
@@ -106,5 +122,6 @@ export function createMountPolicy(opts: MountPolicyOpts): MountPolicy {
     clearPending,
     clearMount: () => store.clear(),
     tryPromote,
+    writeSwState,
   };
 }
