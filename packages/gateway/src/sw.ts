@@ -85,6 +85,24 @@ async function createRuntime(): Promise<Runtime> {
     policy,
     ttlMs: 5 * 60_000,
   });
+
+  try {
+    const ensName = extractEnsName(sw.location.hostname);
+    if (ensName) {
+      const result = await policy.tryPromote({ clients: sw.clients, ensName });
+      if (result) {
+        const from = result.oldCurrent ? formatRef(result.oldCurrent) : "∅";
+        console.info(
+          `[gateway] promoted ${ensName}: ${from} → ${
+            formatRef(result.newCurrent)
+          }`,
+        );
+      }
+    }
+  } catch (err) {
+    console.warn("[gateway] init: tryPromote failed", err);
+  }
+
   return { helia, handlers, bootstrapHandlers, policy, updateCheck };
 }
 
@@ -113,26 +131,6 @@ sw.addEventListener("activate", (event) => {
     await sw
       .clients
       .claim();
-    try {
-      const { policy } = await getRuntime();
-      const ensName = extractEnsName(sw.location.hostname);
-      if (ensName) {
-        const result = await policy.tryPromote({
-          clients: sw.clients,
-          ensName,
-        });
-        if (result) {
-          const from = result.oldCurrent ? formatRef(result.oldCurrent) : "∅";
-          console.info(
-            `[gateway] updated ${ensName}: ${from} → ${
-              formatRef(result.newCurrent)
-            }`,
-          );
-        }
-      }
-    } catch (err) {
-      console.warn("[gateway] activate: tryPromote failed", err);
-    }
   })());
 });
 
