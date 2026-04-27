@@ -5,11 +5,37 @@ import { MemoryDatastore } from "datastore-core";
 import { createHelia } from "helia";
 import { base32 } from "multiformats/bases/base32";
 import { CID } from "multiformats/cid";
+import { readdirSync, readFileSync } from "node:fs";
+import { join, posix, relative } from "node:path";
+import { fileURLToPath } from "node:url";
 
 export type IpfsFixtures = Record<
   string, // expected root CID
   { files: Record<string, string | Uint8Array>; }
 >;
+
+const FIXTURES_ROOT = fileURLToPath(
+  new URL("../../fixtures/", import.meta.url),
+);
+
+export function loadFixtureSite(siteName: string): Record<string, Uint8Array> {
+  const root = join(FIXTURES_ROOT, siteName);
+  const out: Record<string, Uint8Array> = {};
+  const walk = (dir: string): void => {
+    for (const entry of readdirSync(dir, { withFileTypes: true })) {
+      const abs = join(dir, entry.name);
+      if (entry.isDirectory()) {
+        walk(abs);
+        continue;
+      }
+      if (!entry.isFile()) continue;
+      const rel = relative(root, abs).split(/[\\/]+/).join(posix.sep);
+      out[`/${rel}`] = readFileSync(abs);
+    }
+  };
+  walk(root);
+  return out;
+}
 
 const GATEWAY_HOST_PATTERN =
   /^https:\/\/(?:trustless-gateway\.link|4everland\.io)\/ipfs\/([^/?]+)(?:\?format=raw)?$/;
@@ -30,16 +56,22 @@ export async function installIpfsFixture(
     });
     try {
       const fs = unixfs(helia);
-      let dirCid = await fs.addDirectory();
-      for (const [path, content] of Object.entries(files)) {
-        const fileBytes = typeof content === "string"
+      const candidates = Object.entries(files).map(([path, content]) => ({
+        path: path.startsWith("/") ? path.slice(1) : path,
+        content: typeof content === "string"
           ? new TextEncoder().encode(content)
-          : content;
-        const fileCid = await fs.addBytes(fileBytes);
-        const segs = path.startsWith("/") ? path.slice(1) : path;
-        dirCid = await fs.cp(fileCid, dirCid, segs);
+          : content,
+      }));
+      let rootCid: CID | undefined;
+      for await (
+        const entry of fs.addAll(candidates, { wrapWithDirectory: true })
+      ) {
+        rootCid = entry.cid;
       }
-      const computedRoot = dirCid.toString();
+      if (!rootCid) {
+        throw new Error("installIpfsFixture: no root produced by addAll");
+      }
+      const computedRoot = rootCid.toString();
       if (computedRoot !== expectedCid) {
         throw new Error(
           `installIpfsFixture: expected root CID ${expectedCid} but built ${computedRoot}. Update the test's CID or the fixture content.`,

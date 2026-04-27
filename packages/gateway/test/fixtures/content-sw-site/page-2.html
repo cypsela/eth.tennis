@@ -1,0 +1,10 @@
+<!doctype html>
+<html><head></head><body>
+  <h1 id="title">page-2</h1>
+  <pre id="result"></pre>
+  <script>
+    fetch('/api/data').then(async r =>
+      document.getElementById('result').textContent =
+        'absorbed=' + r.headers.get('x-absorbed') + ';body=' + (await r.text()));
+  </script>
+</body></html>
