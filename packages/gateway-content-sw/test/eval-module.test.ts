@@ -59,15 +59,23 @@ describe("evaluateSwModule", () => {
       .toThrow(/eval-boom/);
   });
 
-  test("revokes blob URL after eval", async () => {
+  test("passes bytes and scope to importModule", async () => {
     const { scope } = makeMockScope();
-    const revoke = vi.spyOn(URL, "revokeObjectURL");
-    await evaluateSwModule({
-      bytes: new Uint8Array([1]),
-      scope,
-      importModule: async () => {/* nothing */},
-    });
-    expect(revoke).toHaveBeenCalled();
-    revoke.mockRestore();
+    const fakeImport = vi.fn(
+      async (_b: Uint8Array, _s: ServiceWorkerGlobalScope) => {/* nothing */},
+    );
+    const bytes = new TextEncoder().encode("self.x = 1;");
+    await evaluateSwModule({ bytes, scope, importModule: fakeImport });
+    expect(fakeImport.mock.calls[0]![0]).toBe(bytes);
+    expect(fakeImport.mock.calls[0]![1]).toBe(scope);
+  });
+
+  test("default eval runs the SW source as a classic script", async () => {
+    const { scope } = makeMockScope();
+    const bytes = new TextEncoder().encode(
+      `self.addEventListener('fetch', () => {});`,
+    );
+    const captured = await evaluateSwModule({ bytes, scope });
+    expect(captured.fetch.length).toBe(1);
   });
 });

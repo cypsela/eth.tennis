@@ -12,7 +12,10 @@ describe("rehydrate", () => {
       e.respondWith(new Response("rehydrated"))
     );
     const fetchSwScript = vi.fn(async () => new Uint8Array([1, 2, 3]));
-    const importModule = async (_url: string) => {
+    const importModule = async (
+      _bytes: Uint8Array,
+      _scope: ServiceWorkerGlobalScope,
+    ) => {
       scope.addEventListener("install", installSpy);
       scope.addEventListener("fetch", fetchSpy);
     };

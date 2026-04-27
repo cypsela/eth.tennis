@@ -1,11 +1,14 @@
 import type { CapturedListeners } from "./dispatcher.js";
 
-export type ImportModule = (url: string) => Promise<unknown>;
+export type ImportModule = (
+  bytes: Uint8Array,
+  scope: ServiceWorkerGlobalScope,
+) => Promise<void>;
 
 export interface EvaluateSwModuleOpts {
   bytes: Uint8Array;
   scope: ServiceWorkerGlobalScope;
-  /** Defaults to dynamic `import(url)`. Override in tests. */
+  /** Override the evaluator. Defaults to `new Function('self', code)(scope)`. */
   importModule?: ImportModule;
 }
 
@@ -30,16 +33,20 @@ export async function evaluateSwModule(
   (opts.scope as { addEventListener: typeof patched; }).addEventListener =
     patched;
 
-  const blob = new Blob([opts.bytes as BlobPart], { type: "text/javascript" });
-  const url = URL.createObjectURL(blob);
-  const importModule = opts.importModule
-    ?? ((u: string) => import(/* @vite-ignore */ u));
+  const importModule = opts.importModule ?? defaultImportModule;
   try {
-    await importModule(url);
+    await importModule(opts.bytes, opts.scope);
     return captured;
   } finally {
-    URL.revokeObjectURL(url);
     (opts.scope as { addEventListener: typeof original; }).addEventListener =
       original;
   }
 }
+
+const defaultImportModule: ImportModule = async (bytes, scope) => {
+  const code = new TextDecoder().decode(bytes);
+  const fn = new Function("self", code) as (
+    s: ServiceWorkerGlobalScope,
+  ) => void;
+  fn(scope);
+};
