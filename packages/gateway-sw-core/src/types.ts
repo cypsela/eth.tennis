@@ -71,9 +71,22 @@ export interface Handlers {
   fetchers: Record<string, ContentFetcher>;
 }
 
+/** Persisted SW lifecycle state for a content service worker. */
+export type SwState = {
+  swUrl: string;
+  swInstalled: boolean;
+  swActivated: boolean;
+};
+
+/**
+ * Currently-served mount: a content reference plus optional content-SW state.
+ * Nesting `sw` under `current` makes "SW state without content" unrepresentable.
+ */
+export type CurrentMount = { ref: ContentReference; sw: SwState | null; };
+
 /** Two-slot site mount: serving `current`, staging `pending`. */
 export type SiteMount = {
-  current: ContentReference | null;
+  current: CurrentMount | null;
   pending: ContentReference | null;
   lastChecked: number;
 };
