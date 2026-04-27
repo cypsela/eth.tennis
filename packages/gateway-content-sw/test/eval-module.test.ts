@@ -99,7 +99,10 @@ describe("evaluateSwModule", () => {
 
   test("Proxy: native methods bound to scope (this === scope)", async () => {
     const { scope } = makeMockScope();
-    const skipSpy = vi.fn(async () => undefined);
+    let receivedThis: unknown;
+    const skipSpy = vi.fn(async function(this: unknown) {
+      receivedThis = this;
+    });
     (scope as unknown as { skipWaiting: typeof skipSpy; }).skipWaiting =
       skipSpy;
     const importModule = async (
@@ -116,6 +119,7 @@ describe("evaluateSwModule", () => {
       importModule,
     });
     expect(skipSpy).toHaveBeenCalledTimes(1);
+    expect(receivedThis).toBe(scope);
   });
 
   test("Proxy: assigning to self.fetch is silently ignored; subsequent reads still return shim", async () => {
