@@ -6,7 +6,7 @@ import {
   isAbsorbAck,
   isAbsorbFail,
   isAbsorbRequest,
-} from "../src/protocol/messages.ts";
+} from "../src/protocol/messages.js";
 
 describe("protocol/messages", () => {
   test("isAbsorbRequest narrows on the discriminant", () => {

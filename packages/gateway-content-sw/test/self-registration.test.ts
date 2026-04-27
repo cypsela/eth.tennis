@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
-import { _resetLogOnceForTests } from "../src/log-once.ts";
-import { createRegistrationShim } from "../src/sw-shims/self-registration.ts";
-import { makeMockScope } from "./helpers/mock-sw-scope.ts";
+import { _resetLogOnceForTests } from "../src/log-once.js";
+import { createRegistrationShim } from "../src/sw-shims/self-registration.js";
+import { makeMockScope } from "./helpers/mock-sw-scope.js";
 
 describe("self-registration shim", () => {
   beforeEach(() => _resetLogOnceForTests());

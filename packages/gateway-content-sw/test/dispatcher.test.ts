@@ -1,6 +1,6 @@
 import { describe, expect, test } from "vitest";
-import { createDispatcher } from "../src/absorber/dispatcher.ts";
-import { makeMockFetchEvent } from "./helpers/mock-sw-scope.ts";
+import { createDispatcher } from "../src/absorber/dispatcher.js";
+import { makeMockFetchEvent } from "./helpers/mock-sw-scope.js";
 
 describe("dispatcher", () => {
   test("returns false when registry is empty", () => {

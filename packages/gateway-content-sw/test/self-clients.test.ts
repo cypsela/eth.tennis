@@ -1,6 +1,6 @@
 import { describe, expect, test } from "vitest";
-import { createClientsShim } from "../src/sw-shims/self-clients.ts";
-import { makeMockScope } from "./helpers/mock-sw-scope.ts";
+import { createClientsShim } from "../src/sw-shims/self-clients.js";
+import { makeMockScope } from "./helpers/mock-sw-scope.js";
 
 describe("self-clients shim", () => {
   test("matchAll passes through to scope.clients", async () => {

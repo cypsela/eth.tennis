@@ -1,5 +1,5 @@
 import { describe, expect, test } from "vitest";
-import { fireActivate, fireInstall } from "../src/absorber/synth-events.ts";
+import { fireActivate, fireInstall } from "../src/absorber/synth-events.js";
 
 describe("synth-events", () => {
   test("fireInstall awaits every waitUntil promise", async () => {

@@ -1,5 +1,5 @@
-import { logOnce } from "../log-once.ts";
-import { makeStubProxy } from "./stub-proxy.ts";
+import { logOnce } from "../log-once.js";
+import { makeStubProxy } from "./stub-proxy.js";
 
 export interface RegistrationShimOpts {
   swUrl?: string;

@@ -1,5 +1,5 @@
 import { describe, expect, test, vi } from "vitest";
-import { createFetchShim } from "../src/sw-shims/self-fetch.ts";
+import { createFetchShim } from "../src/sw-shims/self-fetch.js";
 
 describe("self-fetch shim", () => {
   test("routes same-origin requests through sameOriginFetch", async () => {

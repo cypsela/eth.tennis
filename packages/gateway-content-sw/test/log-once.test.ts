@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
-import { _resetLogOnceForTests, logOnce } from "../src/log-once.ts";
+import { _resetLogOnceForTests, logOnce } from "../src/log-once.js";
 
 describe("logOnce", () => {
   beforeEach(() => _resetLogOnceForTests());

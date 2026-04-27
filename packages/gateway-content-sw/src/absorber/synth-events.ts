@@ -1,4 +1,4 @@
-import type { ExtendableEventListener } from "./dispatcher.ts";
+import type { ExtendableEventListener } from "./dispatcher.js";
 
 async function fireExtendable(
   type: "install" | "activate",

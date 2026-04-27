@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
-import { _resetLogOnceForTests } from "../src/log-once.ts";
-import { makeStubProxy } from "../src/sw-shims/stub-proxy.ts";
+import { _resetLogOnceForTests } from "../src/log-once.js";
+import { makeStubProxy } from "../src/sw-shims/stub-proxy.js";
 
 describe("makeStubProxy", () => {
   beforeEach(() => _resetLogOnceForTests());

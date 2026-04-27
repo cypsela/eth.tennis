@@ -1,4 +1,4 @@
-import { logOnce } from "../log-once.ts";
+import { logOnce } from "../log-once.js";
 
 export function makeStubProxy(name: string): unknown {
   return new Proxy(function stub() {}, {
