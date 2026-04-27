@@ -6,6 +6,7 @@ import {
   type AbsorbFailReason,
   isAbsorbRequest,
 } from "../protocol/messages.js";
+import { createFetchShim } from "../sw-shims/self-fetch.js";
 import { createDispatcher } from "./dispatcher.js";
 import { evaluateSwModule, type ImportModule } from "./eval-module.js";
 import { rehydrate } from "./rehydrate.js";
@@ -16,6 +17,7 @@ export interface ContentSwIntegration {
   readSwState(): SwState | null | Promise<SwState | null>;
   writeSwState(state: SwState): Promise<void>;
   fetchSwScript: (url: string) => Promise<Uint8Array>;
+  sameOriginFetch: (req: Request) => Promise<Response>;
   defaultFetch: (event: FetchEvent) => Promise<Response>;
   importModule?: ImportModule;
 }
@@ -23,7 +25,12 @@ export interface ContentSwIntegration {
 export function installContentSw(integration: ContentSwIntegration): void {
   const dispatcher = createDispatcher();
   const { scope } = integration;
-  const shim = scope.fetch.bind(scope);
+  const realFetch = scope.fetch.bind(scope);
+  const shim = createFetchShim({
+    origin: scope.location.origin,
+    sameOriginFetch: integration.sameOriginFetch,
+    realFetch,
+  });
 
   scope.addEventListener("fetch", (event) => {
     if (dispatcher.handle(event)) return;

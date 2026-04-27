@@ -25,6 +25,7 @@ describe("absorb composed flow", () => {
       readSwState: () => null,
       writeSwState,
       fetchSwScript,
+      sameOriginFetch: vi.fn(async () => new Response()),
       defaultFetch,
       importModule: async (
         _bytes: Uint8Array,
@@ -76,6 +77,7 @@ describe("absorb composed flow", () => {
       readSwState: () => null,
       writeSwState: vi.fn(),
       fetchSwScript: async () => new Uint8Array([1]),
+      sameOriginFetch: vi.fn(async () => new Response()),
       defaultFetch: async () => new Response("default"),
       importModule: async (
         _bytes: Uint8Array,
@@ -110,6 +112,7 @@ describe("absorb composed flow", () => {
       readSwState: () => null,
       writeSwState: vi.fn(),
       fetchSwScript: async () => new Uint8Array(),
+      sameOriginFetch: vi.fn(async () => new Response()),
       defaultFetch,
       importModule: async (
         _bytes: Uint8Array,
@@ -121,5 +124,62 @@ describe("absorb composed flow", () => {
     const ev = makeMockFetchEvent(new Request("https://x.eth.tennis/page"));
     (fetchListener?.fn as (e: FetchEvent) => void)(ev);
     expect(defaultFetch).toHaveBeenCalled();
+  });
+
+  test("absorbed listener routes same-origin fetch through sameOriginFetch and cross-origin through realFetch", async () => {
+    const { scope, listeners } = makeMockScope();
+    const sameOriginResponse = new Response("from-gateway");
+    const sameOriginFetch = vi.fn(async () => sameOriginResponse);
+    // mock-sw-scope sets scope.fetch = vi.fn(async () => new Response("real fetch")).
+    // installContentSw captures realFetch = scope.fetch.bind(scope), so calls to
+    // realFetch increment scope.fetch's call count.
+    const realFetchMock = scope.fetch as unknown as ReturnType<typeof vi.fn>;
+    realFetchMock.mockClear();
+
+    installContentSw({
+      scope,
+      readSwState: () => null,
+      writeSwState: vi.fn(),
+      fetchSwScript: async () => new Uint8Array([1]),
+      sameOriginFetch,
+      defaultFetch: async () => new Response("default"),
+      importModule: async (
+        _b: Uint8Array,
+        self: ServiceWorkerGlobalScope,
+        fetch: typeof globalThis.fetch,
+      ) => {
+        self.addEventListener("fetch", (e) => {
+          e.respondWith((async () => fetch(e.request))());
+        });
+      },
+    });
+
+    // Trigger absorb so the captured listener is registered with the dispatcher.
+    const message = listeners.find((l) => l.type === "message");
+    const channel = new MessageChannel();
+    await (message?.fn as Function)({
+      data: { type: "absorb", swUrl: "/sw.js" },
+      ports: [channel.port2],
+      waitUntil: (p: Promise<unknown>) => p,
+    });
+    await new Promise((r) => setTimeout(r, 10));
+
+    // Now drive same-origin and cross-origin fetch events through the gateway listener.
+    const fetchListener = listeners.find((l) => l.type === "fetch");
+
+    const sameOrigin = makeMockFetchEvent(
+      new Request("https://x.eth.tennis/api"),
+    );
+    (fetchListener?.fn as (e: FetchEvent) => void)(sameOrigin);
+    await sameOrigin.responded();
+    expect(sameOriginFetch).toHaveBeenCalledTimes(1);
+    expect(realFetchMock).not.toHaveBeenCalled();
+
+    const crossOrigin = makeMockFetchEvent(
+      new Request("https://other.example/x"),
+    );
+    (fetchListener?.fn as (e: FetchEvent) => void)(crossOrigin);
+    await crossOrigin.responded();
+    expect(realFetchMock).toHaveBeenCalledTimes(1);
   });
 });
