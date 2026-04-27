@@ -97,7 +97,9 @@ describe("evaluateSwModule", () => {
 
   test("default eval: bare fetch in absorbed module resolves to shim", async () => {
     const { scope } = makeMockScope();
-    const shim = vi.fn(async () => new Response("from-shim"));
+    const shim = vi.fn(async (_req: RequestInfo | URL) =>
+      new Response("from-shim")
+    );
     const bytes = new TextEncoder().encode(
       `self.addEventListener('fetch', (e) => {
       e.respondWith((async () => fetch(e.request))());
