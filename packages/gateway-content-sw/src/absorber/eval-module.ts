@@ -2,13 +2,15 @@ import type { CapturedListeners } from "./dispatcher.js";
 
 export type ImportModule = (
   bytes: Uint8Array,
-  scope: ServiceWorkerGlobalScope,
+  self: ServiceWorkerGlobalScope,
+  fetch: typeof globalThis.fetch,
 ) => Promise<void>;
 
 export interface EvaluateSwModuleOpts {
   bytes: Uint8Array;
   scope: ServiceWorkerGlobalScope;
-  /** Override the evaluator. Defaults to `new Function('self', code)(scope)`. */
+  shim: typeof globalThis.fetch;
+  /** Override the evaluator. Defaults to `new Function('self', 'fetch', code)(scope, shim)`. */
   importModule?: ImportModule;
 }
 
@@ -35,7 +37,7 @@ export async function evaluateSwModule(
 
   const importModule = opts.importModule ?? defaultImportModule;
   try {
-    await importModule(opts.bytes, opts.scope);
+    await importModule(opts.bytes, opts.scope, opts.shim);
     return captured;
   } finally {
     (opts.scope as { addEventListener: typeof original; }).addEventListener =
@@ -43,10 +45,11 @@ export async function evaluateSwModule(
   }
 }
 
-const defaultImportModule: ImportModule = async (bytes, scope) => {
+const defaultImportModule: ImportModule = async (bytes, self, fetch) => {
   const code = new TextDecoder().decode(bytes);
-  const fn = new Function("self", code) as (
+  const fn = new Function("self", "fetch", code) as (
     s: ServiceWorkerGlobalScope,
+    f: typeof globalThis.fetch,
   ) => void;
-  fn(scope);
+  fn(self, fetch);
 };

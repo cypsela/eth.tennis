@@ -14,7 +14,8 @@ describe("rehydrate", () => {
     const fetchSwScript = vi.fn(async () => new Uint8Array([1, 2, 3]));
     const importModule = async (
       _bytes: Uint8Array,
-      _scope: ServiceWorkerGlobalScope,
+      _self: ServiceWorkerGlobalScope,
+      _fetch: typeof globalThis.fetch,
     ) => {
       scope.addEventListener("install", installSpy);
       scope.addEventListener("fetch", fetchSpy);
@@ -24,6 +25,7 @@ describe("rehydrate", () => {
       dispatcher,
       swUrl: "/sw.js",
       fetchSwScript,
+      shim: scope.fetch,
       importModule,
     });
     expect(installSpy).not.toHaveBeenCalled();
@@ -43,6 +45,7 @@ describe("rehydrate", () => {
       dispatcher,
       swUrl: "/sw.js",
       fetchSwScript,
+      shim: scope.fetch,
       importModule: async () => {},
     });
     const ev = makeMockFetchEvent(new Request("https://x/"));

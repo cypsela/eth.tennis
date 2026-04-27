@@ -26,7 +26,11 @@ describe("absorb composed flow", () => {
       writeSwState,
       fetchSwScript,
       defaultFetch,
-      importModule: async () => {
+      importModule: async (
+        _bytes: Uint8Array,
+        _self: ServiceWorkerGlobalScope,
+        _fetch: typeof globalThis.fetch,
+      ) => {
         scope.addEventListener("install", installCallback);
         scope.addEventListener("activate", activateCallback);
         scope.addEventListener("fetch", fetchCallback);
@@ -73,7 +77,11 @@ describe("absorb composed flow", () => {
       writeSwState: vi.fn(),
       fetchSwScript: async () => new Uint8Array([1]),
       defaultFetch: async () => new Response("default"),
-      importModule: async () => {
+      importModule: async (
+        _bytes: Uint8Array,
+        _self: ServiceWorkerGlobalScope,
+        _fetch: typeof globalThis.fetch,
+      ) => {
         throw new Error("eval-boom");
       },
     });
@@ -103,7 +111,11 @@ describe("absorb composed flow", () => {
       writeSwState: vi.fn(),
       fetchSwScript: async () => new Uint8Array(),
       defaultFetch,
-      importModule: async () => {},
+      importModule: async (
+        _bytes: Uint8Array,
+        _self: ServiceWorkerGlobalScope,
+        _fetch: typeof globalThis.fetch,
+      ) => {},
     });
     const fetchListener = listeners.find((l) => l.type === "fetch");
     const ev = makeMockFetchEvent(new Request("https://x.eth.tennis/page"));

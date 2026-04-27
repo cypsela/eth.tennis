@@ -23,6 +23,7 @@ export interface ContentSwIntegration {
 export function installContentSw(integration: ContentSwIntegration): void {
   const dispatcher = createDispatcher();
   const { scope } = integration;
+  const shim = scope.fetch.bind(scope);
 
   scope.addEventListener("fetch", (event) => {
     if (dispatcher.handle(event)) return;
@@ -38,7 +39,7 @@ export function installContentSw(integration: ContentSwIntegration): void {
       return;
     }
     (event as ExtendableMessageEvent).waitUntil(
-      handleAbsorb(integration, dispatcher, data.swUrl).then((reply) =>
+      handleAbsorb(integration, dispatcher, data.swUrl, shim).then((reply) =>
         port.postMessage(reply)
       ),
     );
@@ -51,6 +52,7 @@ export function installContentSw(integration: ContentSwIntegration): void {
         dispatcher,
         swUrl: existing.swUrl,
         fetchSwScript: integration.fetchSwScript,
+        shim,
         ...(integration.importModule
           ? { importModule: integration.importModule }
           : {}),
@@ -63,6 +65,7 @@ async function handleAbsorb(
   integration: ContentSwIntegration,
   dispatcher: ReturnType<typeof createDispatcher>,
   swUrl: string,
+  shim: typeof globalThis.fetch,
 ): Promise<AbsorbAck | AbsorbFail> {
   const fail = (reason: AbsorbFailReason, err: unknown): AbsorbFail => {
     logOnce(`absorb.${reason}`, err);
@@ -81,6 +84,7 @@ async function handleAbsorb(
     captured = await evaluateSwModule({
       bytes,
       scope: integration.scope,
+      shim,
       ...(integration.importModule
         ? { importModule: integration.importModule }
         : {}),

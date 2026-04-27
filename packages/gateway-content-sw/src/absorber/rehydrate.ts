@@ -7,6 +7,7 @@ export interface RehydrateOpts {
   dispatcher: Dispatcher;
   swUrl: string;
   fetchSwScript: (url: string) => Promise<Uint8Array>;
+  shim: typeof globalThis.fetch;
   importModule?: ImportModule;
 }
 
@@ -22,6 +23,7 @@ export async function rehydrate(opts: RehydrateOpts): Promise<void> {
     const captured = await evaluateSwModule({
       bytes,
       scope: opts.scope,
+      shim: opts.shim,
       ...(opts.importModule ? { importModule: opts.importModule } : {}),
     });
     opts.dispatcher.register(captured);
