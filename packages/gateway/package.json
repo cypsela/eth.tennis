@@ -16,6 +16,7 @@
     "ci": "pnpm build && pnpm test"
   },
   "dependencies": {
+    "@cypsela/gateway-content-sw": "workspace:*",
     "@cypsela/gateway-sw-core": "workspace:*",
     "@helia/interface": "^6.2.1",
     "multiformats": "^13.4.2"

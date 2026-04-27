@@ -1,0 +1,32 @@
+{
+  "name": "@cypsela/gateway-content-sw",
+  "version": "0.0.0",
+  "description": "Transparent content service worker absorption for the eth.tennis gateway",
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./dist/src/index.d.ts",
+      "import": "./dist/src/index.js"
+    }
+  },
+  "files": ["./dist/src"],
+  "license": "MIT",
+  "author": "tabcat",
+  "scripts": {
+    "build": "pnpm bundle-shim && tsc",
+    "bundle-shim": "tsx scripts/bundle-shim.ts",
+    "test": "vitest --dir test --config vitest.config.ts --run",
+    "test:watch": "vitest --dir test --config vitest.config.ts",
+    "ci": "pnpm build && pnpm test"
+  },
+  "dependencies": {
+    "@cypsela/gateway-sw-core": "workspace:*"
+  },
+  "devDependencies": {
+    "esbuild": "^0.27.7",
+    "jsdom": "^29.0.2",
+    "tsx": "^4.20.6",
+    "typescript": "^6.0.3",
+    "vitest": "^4.1.4"
+  }
+}
