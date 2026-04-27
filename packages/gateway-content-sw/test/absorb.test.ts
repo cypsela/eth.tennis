@@ -172,6 +172,7 @@ describe("absorb composed flow", () => {
     );
     (fetchListener?.fn as (e: FetchEvent) => void)(sameOrigin);
     await sameOrigin.responded();
+    expect(sameOrigin.responded()).not.toBeNull();
     expect(sameOriginFetch).toHaveBeenCalledTimes(1);
     expect(realFetchMock).not.toHaveBeenCalled();
 
@@ -180,6 +181,7 @@ describe("absorb composed flow", () => {
     );
     (fetchListener?.fn as (e: FetchEvent) => void)(crossOrigin);
     await crossOrigin.responded();
+    expect(crossOrigin.responded()).not.toBeNull();
     expect(realFetchMock).toHaveBeenCalledTimes(1);
   });
 });
