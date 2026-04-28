@@ -40,7 +40,7 @@ test.describe("error paths", () => {
       .toBeVisible({ timeout: 10_000 });
   });
 
-  test("unsupported-protocol for non ipfs/ipns contenthash", async ({ page, context }) => {
+  test("no-handler for non ipfs/ipns contenthash (hop logged before failure)", async ({ page, context }) => {
     const swarmHash = contenthashHex(
       "swarm",
       "d1de9994b4d039f6548d191eb26786769f580809256b4685ef316805265ea162",
@@ -67,10 +67,10 @@ test.describe("error paths", () => {
       });
     });
     await page.goto("http://weird.eth.tennis.localhost:5173/");
+    await expect(page.locator(".line").filter({ hasText: "swarm:" }))
+      .toBeVisible({ timeout: 10_000 });
     await expect(
-      page.locator(".line.level-error").filter({
-        hasText: "unsupported-protocol",
-      }),
+      page.locator(".line.level-error").filter({ hasText: "no-handler" }),
     )
       .toBeVisible({ timeout: 10_000 });
   });

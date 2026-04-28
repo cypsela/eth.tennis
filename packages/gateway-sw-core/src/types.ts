@@ -13,7 +13,6 @@ export type ErrorClass =
   | "sw-register-failed"
   | "sw-activation-timeout"
   | "contenthash-not-set"
-  | "unsupported-protocol"
   | "no-handler"
   | "resolution-loop"
   | "ipns-record-not-found"

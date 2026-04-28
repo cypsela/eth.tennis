@@ -1,13 +1,14 @@
 import { addEnsContracts } from "@ensdomains/ensjs";
 import type { ClientWithEns } from "@ensdomains/ensjs/contracts";
 import { getContentHashRecord } from "@ensdomains/ensjs/public";
+import { CID } from "multiformats/cid";
 import { createPublicClient, fallback, http } from "viem";
 import { mainnet } from "viem/chains";
 
 import {
   ContentHashNotSet,
   EnsResolveFailed,
-  UnsupportedProtocol,
+  IpnsAddressUnrecognized,
 } from "../errors.js";
 import type { AddressReference, Reference, Resolver } from "../types.js";
 
@@ -89,7 +90,32 @@ function decodeRecord(
     return { kind: "content", protocol: "ipfs", value };
   }
   if (proto === "ipns") {
-    return { kind: "address", protocol: "ipns", value };
+    if (isCid(value)) return { kind: "address", protocol: "ipns", value };
+    if (looksLikeDomain(value)) {
+      return { kind: "address", protocol: "dnslink", value };
+    }
+    throw new IpnsAddressUnrecognized(ensName, value);
   }
-  throw new UnsupportedProtocol(ensName, String(proto));
+  return { kind: "address", protocol: String(proto), value };
+}
+
+function isCid(s: string): boolean {
+  try {
+    CID.parse(s);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+export function looksLikeDomain(s: string): boolean {
+  if (s.length < 1 || s.length > 253) return false;
+  const labels = s.split(".");
+  if (labels.length < 2) return false;
+  const labelRe = /^[a-z0-9](?:[a-z0-9-]*[a-z0-9])?$/i;
+  for (const label of labels) {
+    if (label.length < 1 || label.length > 63) return false;
+    if (!labelRe.test(label)) return false;
+  }
+  return true;
 }

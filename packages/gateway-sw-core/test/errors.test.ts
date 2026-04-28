@@ -5,16 +5,12 @@ import {
   GatewayError,
   IpnsRecordNotFound,
   IpnsRecordUnverifiable,
-  UnsupportedProtocol,
 } from "../src/errors.js";
 
 describe("GatewayError subclasses", () => {
   test("each subclass carries its error class name", () => {
     expect(new ContentHashNotSet("vitalik.eth").errorClass).toBe(
       "contenthash-not-set",
-    );
-    expect(new UnsupportedProtocol("vitalik.eth", "swarm").errorClass).toBe(
-      "unsupported-protocol",
     );
     expect(new IpnsRecordNotFound("vitalik.eth", "k51").errorClass).toBe(
       "ipns-record-not-found",

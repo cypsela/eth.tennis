@@ -12,13 +12,6 @@ export class ContentHashNotSet extends GatewayError {
   readonly errorClass = "contenthash-not-set" as const;
 }
 
-export class UnsupportedProtocol extends GatewayError {
-  readonly errorClass = "unsupported-protocol" as const;
-  constructor(ensName: string, public readonly protocol: string) {
-    super(ensName, `unsupported protocol: ${protocol}`);
-  }
-}
-
 export class IpnsRecordNotFound extends GatewayError {
   readonly errorClass = "ipns-record-not-found" as const;
   constructor(
