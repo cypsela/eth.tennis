@@ -1,0 +1,23 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>content-sw fixture v1</title>
+</head>
+<body>
+  <h1 id="title">fixture</h1>
+  <pre id="result"></pre>
+  <a href="/page-2.html">page-2</a>
+  <script>
+    (async () => {
+      try { await navigator.serviceWorker.register('/sw.js'); }
+      catch (e) { document.getElementById('result').textContent = 'register-failed: ' + e; return; }
+      const r = await fetch('/api/data');
+      document.getElementById('result').textContent =
+        'absorbed=' + r.headers.get('x-absorbed')
+        + ';version=' + r.headers.get('x-version')
+        + ';body=' + (await r.text());
+    })();
+  </script>
+</body>
+</html>
