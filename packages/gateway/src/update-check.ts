@@ -7,15 +7,14 @@ import {
   type Reference,
   resolveReference,
 } from "@cypsela/gateway-sw-core";
-import type { Helia } from "@helia/interface";
 import { CID } from "multiformats/cid";
 
 import { logErrorTree } from "./log-error.ts";
 import type { MountPolicy } from "./mount-policy.ts";
-import { fetchRootThenDrain } from "./pinning.ts";
+import type { EnsurePinned } from "./pinning.ts";
 
 export interface UpdateCheckOpts {
-  helia: Pick<Helia, "pins">;
+  ensurePinned: EnsurePinned;
   handlers: Handlers;
   policy: MountPolicy;
   ttlMs: number;
@@ -54,7 +53,7 @@ export function createUpdateCheck(opts: UpdateCheckOpts): UpdateCheck {
 
     console.info(`[gateway] ${ensName}: fetching ${formatRef(fresh)}`);
     try {
-      await fetchRootThenDrain(opts.helia as Helia, CID.parse(fresh.value), {
+      await opts.ensurePinned(CID.parse(fresh.value), {
         onSuccess: () =>
           console.info(
             `[gateway] ${ensName} fully pinned (${formatRef(fresh)})`,

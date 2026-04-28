@@ -31,3 +31,43 @@ export async function fetchRootThenDrain(
     }
   })();
 }
+
+export type EnsurePinned = (cid: CID, hooks?: PinHooks) => Promise<void>;
+
+export function createEnsurePinned(helia: Pick<Helia, "pins">): EnsurePinned {
+  const inflight = new Map<
+    string,
+    { promise: Promise<void>; hooks: PinHooks[]; }
+  >();
+  const completed = new Set<string>();
+  return (cid, hooks) => {
+    const k = cid.toString();
+    if (completed.has(k)) {
+      hooks?.onSuccess?.();
+      return Promise.resolve();
+    }
+    const existing = inflight.get(k);
+    if (existing) {
+      if (hooks) existing.hooks.push(hooks);
+      return existing.promise;
+    }
+    const allHooks: PinHooks[] = hooks ? [hooks] : [];
+    const promise = fetchRootThenDrain(helia, cid, {
+      onSuccess: () => {
+        completed.add(k);
+        inflight.delete(k);
+        for (const h of allHooks) h.onSuccess?.();
+      },
+      onFailure: (err) => {
+        inflight.delete(k);
+        for (const h of allHooks) h.onFailure?.(err);
+      },
+    })
+      .catch((err) => {
+        inflight.delete(k);
+        throw err;
+      });
+    inflight.set(k, { promise, hooks: allHooks });
+    return promise;
+  };
+}

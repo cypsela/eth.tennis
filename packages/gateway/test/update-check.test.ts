@@ -2,6 +2,7 @@ import { createSiteMountStore, type Handlers } from "@cypsela/gateway-sw-core";
 import { MemoryDatastore } from "datastore-core";
 import { describe, expect, test, vi } from "vitest";
 import { createMountPolicy } from "../src/mount-policy.ts";
+import { createEnsurePinned } from "../src/pinning.ts";
 import { createUpdateCheck } from "../src/update-check.ts";
 
 function content(protocol: string, value: string) {
@@ -27,7 +28,8 @@ function setup(
     resolvers: { ens: { protocol: "ens", resolve: async () => terminal } },
     fetchers: {},
   };
-  const uc = createUpdateCheck({ helia, handlers, policy, ttlMs: 1000 });
+  const ensurePinned = createEnsurePinned(helia);
+  const uc = createUpdateCheck({ ensurePinned, handlers, policy, ttlMs: 1000 });
   return { policy, uc, helia };
 }
 
@@ -86,7 +88,13 @@ describe("update-check", () => {
       },
       fetchers: {},
     };
-    const uc = createUpdateCheck({ helia, handlers, policy, ttlMs: 1000 });
+    const ensurePinned = createEnsurePinned(helia);
+    const uc = createUpdateCheck({
+      ensurePinned,
+      handlers,
+      policy,
+      ttlMs: 1000,
+    });
     await policy.writeCurrent(content("ipfs", CID_A));
     const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
     await uc.run("x.eth");
@@ -107,7 +115,13 @@ describe("update-check", () => {
       resolvers: { ens: { protocol: "ens", resolve } },
       fetchers: {},
     };
-    const uc = createUpdateCheck({ helia, handlers, policy, ttlMs: 1000 });
+    const ensurePinned = createEnsurePinned(helia);
+    const uc = createUpdateCheck({
+      ensurePinned,
+      handlers,
+      policy,
+      ttlMs: 1000,
+    });
     await Promise.all([uc.run("x.eth"), uc.run("x.eth"), uc.run("x.eth")]);
     expect(resolve).toHaveBeenCalledTimes(1);
   });

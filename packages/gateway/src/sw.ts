@@ -23,6 +23,7 @@ import type { Helia } from "@helia/interface";
 
 import { logErrorTree } from "./log-error.ts";
 import { createMountPolicy, type MountPolicy } from "./mount-policy.ts";
+import { createEnsurePinned, type EnsurePinned } from "./pinning.ts";
 import { createUpdateCheck, type UpdateCheck } from "./update-check.ts";
 
 declare const __SHELL_ASSETS__: string[];
@@ -68,6 +69,7 @@ interface Runtime {
   bootstrapHandlers: Handlers;
   policy: MountPolicy;
   updateCheck: UpdateCheck;
+  ensurePinned: EnsurePinned;
   swStateCache: { value: SwState | null; };
 }
 
@@ -87,8 +89,9 @@ async function createRuntime(): Promise<Runtime> {
     resolvers: { ens: createRacingEnsResolver({ rpcUrls: RPC_URLS }), ipns },
     fetchers: { ipfs },
   };
+  const ensurePinned = createEnsurePinned(helia);
   const updateCheck = createUpdateCheck({
-    helia,
+    ensurePinned,
     handlers,
     policy,
     ttlMs: 5 * 60_000,
@@ -125,6 +128,7 @@ async function createRuntime(): Promise<Runtime> {
     bootstrapHandlers,
     policy,
     updateCheck,
+    ensurePinned,
     swStateCache,
   };
 }
@@ -167,8 +171,7 @@ sw.addEventListener("message", (event) => {
   const source = event.source as Client | null;
   event.waitUntil((async () => {
     try {
-      const { bootstrapHandlers, helia, policy } = await getRuntime();
-      const { fetchRootThenDrain } = await import("./pinning.ts");
+      const { bootstrapHandlers, ensurePinned, policy } = await getRuntime();
       const { resolveReference } = await import("@cypsela/gateway-sw-core");
       source?.postMessage({
         type: "log",
@@ -200,7 +203,7 @@ sw.addEventListener("message", (event) => {
       });
       const { CID } = await import("multiformats/cid");
       try {
-        await fetchRootThenDrain(helia, CID.parse(fresh.value), {
+        await ensurePinned(CID.parse(fresh.value), {
           onSuccess: () =>
             console.info(
               `[gateway] ${ensName} fully pinned (${formatRef(fresh)})`,
