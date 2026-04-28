@@ -25,31 +25,31 @@ const EMPTY: SiteMount = { current: null, pending: null, lastChecked: 0 };
 function isContentRef(x: unknown): x is ContentReference {
   if (typeof x !== "object" || x === null) return false;
   const o = x as Record<string, unknown>;
-  return o.kind === "content"
-    && typeof o.protocol === "string"
-    && typeof o.value === "string";
+  return o["kind"] === "content"
+    && typeof o["protocol"] === "string"
+    && typeof o["value"] === "string";
 }
 
 function isSwState(x: unknown): x is SwState {
   if (typeof x !== "object" || x === null) return false;
   const o = x as Record<string, unknown>;
-  return typeof o.swUrl === "string"
-    && typeof o.swInstalled === "boolean"
-    && typeof o.swActivated === "boolean";
+  return typeof o["swUrl"] === "string"
+    && typeof o["swInstalled"] === "boolean"
+    && typeof o["swActivated"] === "boolean";
 }
 
 function isCurrentMount(x: unknown): x is CurrentMount {
   if (typeof x !== "object" || x === null) return false;
   const o = x as Record<string, unknown>;
-  return isContentRef(o.ref) && (o.sw === null || isSwState(o.sw));
+  return isContentRef(o["ref"]) && (o["sw"] === null || isSwState(o["sw"]));
 }
 
 function isSiteMount(x: unknown): x is SiteMount {
   if (typeof x !== "object" || x === null) return false;
   const o = x as Record<string, unknown>;
-  if (typeof o.lastChecked !== "number") return false;
-  if (o.current !== null && !isCurrentMount(o.current)) return false;
-  if (o.pending !== null && !isContentRef(o.pending)) return false;
+  if (typeof o["lastChecked"] !== "number") return false;
+  if (o["current"] !== null && !isCurrentMount(o["current"])) return false;
+  if (o["pending"] !== null && !isContentRef(o["pending"])) return false;
   return true;
 }
 
