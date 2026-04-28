@@ -36,6 +36,6 @@ jobs:
           cache: pnpm
           cache-dependency-path: pnpm-lock.yaml
       - run: pnpm install --frozen-lockfile
-      - run: pnpm --filter @cypsela/gateway-sw-core run build
+      - run: pnpm --filter "...^@cypsela/gateway" run build
       - run: pnpm --filter @cypsela/gateway exec playwright install --with-deps chromium
       - run: pnpm --filter @cypsela/gateway run test:e2e
