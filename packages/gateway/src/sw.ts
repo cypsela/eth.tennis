@@ -52,6 +52,8 @@ const BYPASS_PREFIXES = __BYPASS_PREFIXES__;
 const PRECACHE = ["/", ...SHELL_ASSETS];
 const BYPASS_PATHS = new Set<string>(SHELL_ASSETS);
 
+const FETCH_BUDGET = { resolveStepMs: 4_000, fetchTimeoutMs: 8_000 } as const;
+
 function isShellAsset(pathname: string): boolean {
   if (BYPASS_PATHS.has(pathname)) return true;
   return BYPASS_PREFIXES.some((p) => pathname.startsWith(p));
@@ -203,7 +205,10 @@ sw.addEventListener("message", (event) => {
           glyph: "↳",
           text: `${formatRef(from as never)} → ${formatRef(to as never)}`,
         });
-      const fresh = await resolveReference(start, bootstrapHandlers, { onHop });
+      const fresh = await resolveReference(start, bootstrapHandlers, {
+        onHop,
+        resolveStepMs: 4_000,
+      });
       source?.postMessage({
         type: "log",
         source: "sw",
@@ -274,6 +279,7 @@ installContentSw({
       mount.current.ref,
       path,
       runtime.handlers,
+      FETCH_BUDGET,
     );
     if (!resp.ok) {
       throw new Error(`fetchSwScript ${url} → ${resp.status}`);
@@ -285,7 +291,12 @@ installContentSw({
     const mount = await runtime.policy.read();
     if (!mount.current) throw new Error("no current mount");
     const path = new URL(req.url).pathname;
-    return fetchReference(mount.current.ref, path, runtime.handlers);
+    return fetchReference(
+      mount.current.ref,
+      path,
+      runtime.handlers,
+      FETCH_BUDGET,
+    );
   },
   defaultFetch: async (event) => gatewayDefaultFetch(event, await getRuntime()),
 });
@@ -322,6 +333,7 @@ async function gatewayDefaultFetch(
       mount.current.ref,
       url.pathname,
       runtime.handlers,
+      FETCH_BUDGET,
     );
   } catch (err) {
     console.error(err);

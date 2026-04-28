@@ -41,7 +41,10 @@ export function createUpdateCheck(opts: UpdateCheckOpts): UpdateCheck {
       console.info(`[gateway] ${ensName}: ${formatHop(from, to)}`);
     let fresh: Reference;
     try {
-      fresh = await resolveReference(start, opts.handlers, { onHop });
+      fresh = await resolveReference(start, opts.handlers, {
+        onHop,
+        resolveStepMs: 15_000,
+      });
     } catch (err) {
       logErrorTree(`[gateway] update-check failed for ${ensName}:`, err);
       throw err;
