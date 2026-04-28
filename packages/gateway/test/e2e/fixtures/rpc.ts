@@ -1,11 +1,16 @@
 import { encode as encodeContentHash } from "@ensdomains/content-hash";
-import type { Page, Route } from "@playwright/test";
+import type { BrowserContext, Route } from "@playwright/test";
 import { decodeFunctionData, encodeAbiParameters, type Hex } from "viem";
 
-export type RpcFixtures = Record<
-  string,
-  { protocol: "ipfs" | "ipns"; cid: string; } | null
->;
+export type ContentHashValue =
+  | { protocol: "ipfs" | "ipns"; cid: string; }
+  | null;
+
+export type RpcFixtures = Record<string, ContentHashValue>;
+
+export interface RpcController {
+  setContenthash(ens: string, value: ContentHashValue): void;
+}
 
 const RESOLVE_ABI = [{
   name: "resolve",
@@ -21,36 +26,39 @@ const RESOLVE_ABI = [{
 const RESOLVER_ADDRESS = "0x0000000000000000000000000000000000000001";
 
 export async function installRpcFixture(
-  page: Page,
+  context: BrowserContext,
   fixtures: RpcFixtures,
-): Promise<void> {
-  await page.context().route(
-    "https://cloudflare-eth.com/**",
-    async (route: Route) => {
-      const body = await route.request().postDataJSON() as {
-        id?: number | string;
-        method: string;
-        params: unknown[];
-      } | null;
-      if (!body || typeof body.method !== "string") {
-        await route.fulfill({ status: 400 });
-        return;
-      }
-      const id = body.id ?? 1;
-      const result = dispatch(body.method, body.params, fixtures);
-      await route.fulfill({
-        status: 200,
-        contentType: "application/json",
-        body: JSON.stringify({ jsonrpc: "2.0", id, result }),
-      });
+): Promise<RpcController> {
+  const map = new Map<string, ContentHashValue>(Object.entries(fixtures));
+  await context.route("https://cloudflare-eth.com/**", async (route: Route) => {
+    const body = await route.request().postDataJSON() as {
+      id?: number | string;
+      method: string;
+      params: unknown[];
+    } | null;
+    if (!body || typeof body.method !== "string") {
+      await route.fulfill({ status: 400 });
+      return;
+    }
+    const id = body.id ?? 1;
+    const result = dispatch(body.method, body.params, map);
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({ jsonrpc: "2.0", id, result }),
+    });
+  });
+  return {
+    setContenthash(ens, value) {
+      map.set(ens, value);
     },
-  );
+  };
 }
 
 function dispatch(
   method: string,
   params: unknown[],
-  fixtures: RpcFixtures,
+  fixtures: Map<string, ContentHashValue>,
 ): unknown {
   switch (method) {
     case "eth_chainId":
@@ -74,7 +82,10 @@ function dispatch(
   }
 }
 
-function handleEthCall(params: unknown[], fixtures: RpcFixtures): Hex {
+function handleEthCall(
+  params: unknown[],
+  fixtures: Map<string, ContentHashValue>,
+): Hex {
   const call = params[0] as { data: Hex; };
   let ensName: string;
   try {
@@ -84,7 +95,7 @@ function handleEthCall(params: unknown[], fixtures: RpcFixtures): Hex {
   } catch {
     return "0x";
   }
-  const ch = fixtures[ensName];
+  const ch = fixtures.get(ensName);
   if (!ch) return "0x";
   const chHex = contenthashHex(ch.protocol, ch.cid);
   return encodeUniversalResolverResponse(chHex);
