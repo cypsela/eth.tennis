@@ -11,7 +11,7 @@ import { fileURLToPath } from "node:url";
 
 export type IpfsFixtures = Record<
   string, // expected root CID
-  { files: Record<string, string | Uint8Array>; }
+  { files: Record<string, string | Uint8Array>; delayMs?: number | "infinity"; }
 >;
 
 const FIXTURES_ROOT = fileURLToPath(
@@ -47,8 +47,9 @@ export async function installIpfsFixture(
   fixtures: IpfsFixtures,
 ): Promise<void> {
   const blocks = new Map<string, Uint8Array>();
+  const delays = new Map<string, number | "infinity">();
 
-  for (const [expectedCid, { files }] of Object.entries(fixtures)) {
+  for (const [expectedCid, { files, delayMs }] of Object.entries(fixtures)) {
     const blockstore = new MemoryBlockstore();
     const helia = await createHelia({
       blockstore,
@@ -87,7 +88,9 @@ export async function installIpfsFixture(
           flat.set(c, off);
           off += c.byteLength;
         }
-        blocks.set(base32.encode(pair.cid.multihash.bytes), flat);
+        const key = base32.encode(pair.cid.multihash.bytes);
+        blocks.set(key, flat);
+        if (delayMs != null) delays.set(key, delayMs);
       }
     } finally {
       await helia.stop();
@@ -105,8 +108,17 @@ export async function installIpfsFixture(
     } catch {
       return route.fulfill({ status: 404 });
     }
-    const block = blocks.get(base32.encode(parsed.multihash.bytes));
+    const key = base32.encode(parsed.multihash.bytes);
+    const block = blocks.get(key);
     if (!block) return route.fulfill({ status: 404 });
+    const delay = delays.get(key);
+    if (delay === "infinity") {
+      await new Promise(() => {});
+      return;
+    }
+    if (typeof delay === "number") {
+      await new Promise((r) => setTimeout(r, delay));
+    }
     await route.fulfill({
       status: 200,
       contentType: "application/vnd.ipld.raw",

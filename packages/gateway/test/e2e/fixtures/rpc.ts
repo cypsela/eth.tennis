@@ -2,9 +2,10 @@ import { encode as encodeContentHash } from "@ensdomains/content-hash";
 import type { BrowserContext, Route } from "@playwright/test";
 import { decodeFunctionData, encodeAbiParameters, type Hex } from "viem";
 
-export type ContentHashValue =
-  | { protocol: "ipfs" | "ipns"; cid: string; }
-  | null;
+export type ContentHashValue = { protocol: "ipfs" | "ipns"; cid: string; } | {
+  protocol: "ipns-raw";
+  value: string;
+} | null;
 
 export type RpcFixtures = Record<string, ContentHashValue>;
 
@@ -97,7 +98,9 @@ function handleEthCall(
   }
   const ch = fixtures.get(ensName);
   if (!ch) return "0x";
-  const chHex = contenthashHex(ch.protocol, ch.cid);
+  const chHex = ch.protocol === "ipns-raw"
+    ? ipnsRawContenthashHex(ch.value)
+    : contenthashHex(ch.protocol, ch.cid);
   return encodeUniversalResolverResponse(chHex);
 }
 
@@ -123,6 +126,34 @@ export function encodeUniversalResolverResponse(contenthashBytes: Hex): Hex {
     innerResult,
     RESOLVER_ADDRESS,
   ]);
+}
+
+/**
+ * Builds an "ipns" contenthash whose decoded value is an arbitrary string
+ * (domain, gibberish) by wrapping the UTF-8 bytes in a CIDv1 with identity
+ * multihash + libp2p-key codec — the deprecated non-cryptographic IPNS shape
+ * still seen in old ENS records.
+ */
+export function ipnsRawContenthashHex(value: string): Hex {
+  const utf8 = new TextEncoder().encode(value);
+  if (utf8.length > 35) {
+    throw new Error(
+      `ipnsRawContenthashHex: value too long (${utf8.length} > 35 bytes)`,
+    );
+  }
+  const mh = new Uint8Array(2 + utf8.length);
+  mh[0] = 0x00;
+  mh[1] = utf8.length;
+  mh.set(utf8, 2);
+  const cidv1 = new Uint8Array(2 + mh.length);
+  cidv1[0] = 0x01;
+  cidv1[1] = 0x72;
+  cidv1.set(mh, 2);
+  const all = new Uint8Array(2 + cidv1.length);
+  all[0] = 0xe5;
+  all[1] = 0x01;
+  all.set(cidv1, 2);
+  return ("0x" + Buffer.from(all).toString("hex")) as Hex;
 }
 
 function dnsDecode(hex: Hex): string {
