@@ -30,6 +30,7 @@
   },
   "dependencies": {
     "@ensdomains/ensjs": "^4.2.0",
+    "@helia/dnslink": "^1.2.1",
     "@helia/http": "^3.1.4",
     "@helia/interface": "^6.2.1",
     "@helia/ipns": "^9.2.1",

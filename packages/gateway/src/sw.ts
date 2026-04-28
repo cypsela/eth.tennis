@@ -7,6 +7,7 @@ import {
 } from "@cypsela/gateway-content-sw";
 import {
   ContentUnreachable,
+  createDnslinkResolver,
   createGatewayHelia,
   createIpfsFetcher,
   createIpnsResolver,
@@ -80,13 +81,22 @@ async function createRuntime(): Promise<Runtime> {
   const store = createSiteMountStore(helia.datastore);
   const policy = createMountPolicy({ store, helia });
   const ipns = createIpnsResolver(helia as never);
+  const dnslink = createDnslinkResolver(helia);
   const ipfs = await createIpfsFetcher({ helia });
   const handlers: Handlers = {
-    resolvers: { ens: createRankedEnsResolver({ rpcUrls: RPC_URLS }), ipns },
+    resolvers: {
+      ens: createRankedEnsResolver({ rpcUrls: RPC_URLS }),
+      ipns,
+      dnslink,
+    },
     fetchers: { ipfs },
   };
   const bootstrapHandlers: Handlers = {
-    resolvers: { ens: createRacingEnsResolver({ rpcUrls: RPC_URLS }), ipns },
+    resolvers: {
+      ens: createRacingEnsResolver({ rpcUrls: RPC_URLS }),
+      ipns,
+      dnslink,
+    },
     fetchers: { ipfs },
   };
   const ensurePinned = createEnsurePinned(helia);
