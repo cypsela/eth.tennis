@@ -1,7 +1,12 @@
 import type { Datastore } from "interface-datastore";
 import { Key } from "interface-datastore";
 
-import type { SiteMount } from "./types.js";
+import type {
+  ContentReference,
+  CurrentMount,
+  SiteMount,
+  SwState,
+} from "./types.js";
 
 export interface SiteMountStoreOpts {
   key?: string;
@@ -17,6 +22,37 @@ const DEFAULT_KEY = "/sitemount";
 
 const EMPTY: SiteMount = { current: null, pending: null, lastChecked: 0 };
 
+function isContentRef(x: unknown): x is ContentReference {
+  if (typeof x !== "object" || x === null) return false;
+  const o = x as Record<string, unknown>;
+  return o.kind === "content"
+    && typeof o.protocol === "string"
+    && typeof o.value === "string";
+}
+
+function isSwState(x: unknown): x is SwState {
+  if (typeof x !== "object" || x === null) return false;
+  const o = x as Record<string, unknown>;
+  return typeof o.swUrl === "string"
+    && typeof o.swInstalled === "boolean"
+    && typeof o.swActivated === "boolean";
+}
+
+function isCurrentMount(x: unknown): x is CurrentMount {
+  if (typeof x !== "object" || x === null) return false;
+  const o = x as Record<string, unknown>;
+  return isContentRef(o.ref) && (o.sw === null || isSwState(o.sw));
+}
+
+function isSiteMount(x: unknown): x is SiteMount {
+  if (typeof x !== "object" || x === null) return false;
+  const o = x as Record<string, unknown>;
+  if (typeof o.lastChecked !== "number") return false;
+  if (o.current !== null && !isCurrentMount(o.current)) return false;
+  if (o.pending !== null && !isContentRef(o.pending)) return false;
+  return true;
+}
+
 export function createSiteMountStore(
   datastore: Datastore,
   opts: SiteMountStoreOpts = {},
@@ -27,13 +63,27 @@ export function createSiteMountStore(
 
   return {
     async read(): Promise<SiteMount> {
+      let bytes: Uint8Array;
       try {
-        const bytes = await datastore.get(key);
-        const parsed = JSON.parse(dec.decode(bytes)) as SiteMount;
-        return parsed;
+        bytes = await datastore.get(key);
       } catch {
         return { ...EMPTY };
       }
+      let parsed: unknown;
+      try {
+        parsed = JSON.parse(dec.decode(bytes));
+      } catch {
+        return { ...EMPTY };
+      }
+      if (!isSiteMount(parsed)) {
+        try {
+          await datastore.delete(key);
+        } catch {
+          // best-effort: next read will re-validate-and-discard
+        }
+        return { ...EMPTY };
+      }
+      return parsed;
     },
     async write(mount: SiteMount): Promise<void> {
       await datastore.put(key, enc.encode(JSON.stringify(mount)));

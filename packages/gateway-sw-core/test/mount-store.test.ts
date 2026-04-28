@@ -1,4 +1,5 @@
 import { MemoryDatastore } from "datastore-core";
+import { Key } from "interface-datastore";
 import { describe, expect, test } from "vitest";
 import { createSiteMountStore } from "../src/mount-store.js";
 
@@ -80,6 +81,64 @@ describe("createSiteMountStore", () => {
     await store.clear();
     const mount = await store.read();
     expect(mount).toEqual({ current: null, pending: null, lastChecked: 0 });
+  });
+
+  test("read discards legacy flat-current shape (pre-CurrentMount nesting)", async () => {
+    const ds = new MemoryDatastore();
+    const enc = new TextEncoder();
+    const legacy = {
+      current: { kind: "content", protocol: "ipfs", value: "bafy-legacy" },
+      pending: null,
+      lastChecked: 999,
+    };
+    await ds.put(new Key("/sitemount"), enc.encode(JSON.stringify(legacy)));
+    const store = createSiteMountStore(ds);
+    expect(await store.read()).toEqual({
+      current: null,
+      pending: null,
+      lastChecked: 0,
+    });
+  });
+
+  test("read discards refs missing the kind discriminator", async () => {
+    const ds = new MemoryDatastore();
+    const enc = new TextEncoder();
+    const broken = {
+      current: { ref: { protocol: "ipfs", value: "bafyA" }, sw: null },
+      pending: null,
+      lastChecked: 0,
+    };
+    await ds.put(new Key("/sitemount"), enc.encode(JSON.stringify(broken)));
+    const store = createSiteMountStore(ds);
+    expect(await store.read()).toEqual({
+      current: null,
+      pending: null,
+      lastChecked: 0,
+    });
+  });
+
+  test("read deletes the bad row so subsequent reads skip validation", async () => {
+    const ds = new MemoryDatastore();
+    const enc = new TextEncoder();
+    await ds.put(
+      new Key("/sitemount"),
+      enc.encode(JSON.stringify({ current: { foo: "bar" }, pending: null })),
+    );
+    const store = createSiteMountStore(ds);
+    await store.read();
+    expect(await ds.has(new Key("/sitemount"))).toBe(false);
+  });
+
+  test("read returns defaults on malformed JSON", async () => {
+    const ds = new MemoryDatastore();
+    const enc = new TextEncoder();
+    await ds.put(new Key("/sitemount"), enc.encode("not json {{{"));
+    const store = createSiteMountStore(ds);
+    expect(await store.read()).toEqual({
+      current: null,
+      pending: null,
+      lastChecked: 0,
+    });
   });
 
   test("custom key works (multi-mount datastore)", async () => {
