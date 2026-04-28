@@ -114,3 +114,69 @@ describe("UnknownError", () => {
     expect(err.message).toContain("boom");
   });
 });
+
+import {
+  DnslinkRecordNotFound,
+  DnslinkResolveFailed,
+  FetchTimeout,
+  IpnsAddressUnrecognized,
+  ResolveTimeout,
+} from "../src/errors.js";
+
+describe("IpnsAddressUnrecognized", () => {
+  test("carries class + value in message", () => {
+    const err = new IpnsAddressUnrecognized("nick.eth", "garbage");
+    expect(err.errorClass).toBe("ipns-address-unrecognized");
+    expect(err.ipnsAddress).toBe("garbage");
+    expect(err.message).toContain("garbage");
+  });
+});
+
+describe("DnslinkRecordNotFound", () => {
+  test("carries class + domain", () => {
+    const err = new DnslinkRecordNotFound("foo.eth", "app.uniswap.org");
+    expect(err.errorClass).toBe("dnslink-record-not-found");
+    expect(err.domain).toBe("app.uniswap.org");
+    expect(err.message).toContain("app.uniswap.org");
+  });
+
+  test("preserves cause", () => {
+    const cause = new Error("nx");
+    const err = new DnslinkRecordNotFound("foo.eth", "app", cause);
+    expect((err as { cause?: unknown; }).cause).toBe(cause);
+  });
+});
+
+describe("DnslinkResolveFailed", () => {
+  test("carries class + cause message", () => {
+    const cause = new Error("dns parse");
+    const err = new DnslinkResolveFailed("foo.eth", "app", cause);
+    expect(err.errorClass).toBe("dnslink-resolve-failed");
+    expect(err.message).toContain("dns parse");
+    expect((err as { cause?: unknown; }).cause).toBe(cause);
+  });
+});
+
+describe("ResolveTimeout", () => {
+  test("carries class, ref, budget", () => {
+    const ref = { kind: "address", protocol: "ipns", value: "k51" } as const;
+    const err = new ResolveTimeout(ref, 4_000);
+    expect(err.errorClass).toBe("resolve-timeout");
+    expect(err.ref).toBe(ref);
+    expect(err.budgetMs).toBe(4_000);
+    expect(err.message).toContain("4000");
+    expect(err.message).toContain("k51");
+  });
+});
+
+describe("FetchTimeout", () => {
+  test("carries class, ref, budget", () => {
+    const ref = { kind: "content", protocol: "ipfs", value: "bafy" } as const;
+    const err = new FetchTimeout(ref, 8_000);
+    expect(err.errorClass).toBe("fetch-timeout");
+    expect(err.ref).toBe(ref);
+    expect(err.budgetMs).toBe(8_000);
+    expect(err.message).toContain("8000");
+    expect(err.message).toContain("bafy");
+  });
+});

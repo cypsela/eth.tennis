@@ -19,6 +19,11 @@ export type ErrorClass =
   | "ipns-record-not-found"
   | "ipns-record-unverifiable"
   | "ipns-resolve-failed"
+  | "ipns-address-unrecognized"
+  | "dnslink-record-not-found"
+  | "dnslink-resolve-failed"
+  | "resolve-timeout"
+  | "fetch-timeout"
   | "content-unreachable"
   | "ens-resolve-failed"
   | "unknown-error";
@@ -56,13 +61,20 @@ export type Reference = AddressReference | ContentReference;
 /** Resolves an address reference one hop closer to a content reference. */
 export interface Resolver<P extends string = string> {
   readonly protocol: P;
-  resolve(ref: AddressReference<P>): Promise<Reference>;
+  resolve(
+    ref: AddressReference<P>,
+    options?: { signal?: AbortSignal; },
+  ): Promise<Reference>;
 }
 
 /** Fetches a subresource under a content reference. */
 export interface ContentFetcher<P extends string = string> {
   readonly protocol: P;
-  fetch(ref: ContentReference<P>, path: string): Promise<Response>;
+  fetch(
+    ref: ContentReference<P>,
+    path: string,
+    options?: { signal?: AbortSignal; },
+  ): Promise<Response>;
 }
 
 /** Registry of handlers keyed by protocol string. */

@@ -137,3 +137,74 @@ export class UnknownError extends GatewayError {
     }
   }
 }
+
+export class IpnsAddressUnrecognized extends GatewayError {
+  readonly errorClass = "ipns-address-unrecognized" as const;
+  constructor(ensName: string, public readonly ipnsAddress: string) {
+    super(ensName, `ipns address unrecognized: ${ipnsAddress}`);
+  }
+}
+
+export class DnslinkRecordNotFound extends GatewayError {
+  readonly errorClass = "dnslink-record-not-found" as const;
+  constructor(
+    ensName: string,
+    public readonly domain: string,
+    cause?: unknown,
+  ) {
+    super(ensName, `dnslink record not found: ${domain}`);
+    if (cause !== undefined) {
+      (this as { cause?: unknown; }).cause = cause;
+    }
+  }
+}
+
+export class DnslinkResolveFailed extends GatewayError {
+  readonly errorClass = "dnslink-resolve-failed" as const;
+  constructor(
+    ensName: string,
+    public readonly domain: string,
+    cause?: unknown,
+  ) {
+    const causeMsg = cause instanceof Error
+      ? cause.message
+      : cause != null
+      ? String(cause)
+      : "";
+    super(
+      ensName,
+      causeMsg
+        ? `dnslink resolve failed (${domain}): ${causeMsg}`
+        : `dnslink resolve failed: ${domain}`,
+    );
+    if (cause !== undefined) {
+      (this as { cause?: unknown; }).cause = cause;
+    }
+  }
+}
+
+export class ResolveTimeout extends GatewayError {
+  readonly errorClass = "resolve-timeout" as const;
+  constructor(
+    public readonly ref: Reference,
+    public readonly budgetMs: number,
+  ) {
+    super(
+      ref.value,
+      `resolve timeout: ${ref.protocol}://${ref.value} after ${budgetMs}ms`,
+    );
+  }
+}
+
+export class FetchTimeout extends GatewayError {
+  readonly errorClass = "fetch-timeout" as const;
+  constructor(
+    public readonly ref: Reference,
+    public readonly budgetMs: number,
+  ) {
+    super(
+      ref.value,
+      `fetch timeout: ${ref.protocol}://${ref.value} after ${budgetMs}ms`,
+    );
+  }
+}

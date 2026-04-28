@@ -1,11 +1,17 @@
 import { describe, expect, test, vi } from "vitest";
 import { fetchReference, resolveReference } from "../src/chain.js";
-import { NoHandler, ResolutionLoop } from "../src/errors.js";
+import {
+  FetchTimeout,
+  NoHandler,
+  ResolutionLoop,
+  ResolveTimeout,
+} from "../src/errors.js";
 import type {
   AddressReference,
   ContentReference,
   Handlers,
   Reference,
+  Resolver,
 } from "../src/types.js";
 
 function addr(protocol: string, value: string): AddressReference {
@@ -103,6 +109,80 @@ describe("resolveReference", () => {
   });
 });
 
+describe("resolveReference timeouts and signals", () => {
+  function delayedResolver(delayMs: number, next: Reference): Resolver<string> {
+    return {
+      protocol: "ipns",
+      resolve: (_ref, opts) =>
+        new Promise((resolve, reject) => {
+          const t = setTimeout(() => resolve(next), delayMs);
+          opts?.signal?.addEventListener("abort", () => {
+            clearTimeout(t);
+            reject(opts.signal!.reason ?? new Error("aborted"));
+          });
+        }),
+    };
+  }
+
+  test("slow resolver exceeds resolveStepMs → ResolveTimeout", async () => {
+    const handlers: Handlers = {
+      resolvers: { ipns: delayedResolver(200, content("ipfs", "bafy")) },
+      fetchers: {},
+    };
+    await expect(
+      resolveReference(addr("ipns", "k51"), handlers, { resolveStepMs: 50 }),
+    )
+      .rejects
+      .toBeInstanceOf(ResolveTimeout);
+  });
+
+  test("budget is per step (two slow hops within budget each succeed)", async () => {
+    let calls = 0;
+    const handlers: Handlers = {
+      resolvers: {
+        ens: {
+          protocol: "ens",
+          resolve: () =>
+            new Promise<Reference>((r) =>
+              setTimeout(() => r(addr("ipns", "k51")), 30)
+            ),
+        },
+        ipns: {
+          protocol: "ipns",
+          resolve: () =>
+            new Promise<Reference>((r) => {
+              calls++;
+              setTimeout(() => r(content("ipfs", "bafy")), 30);
+            }),
+        },
+      },
+      fetchers: {},
+    };
+    const out = await resolveReference(addr("ens", "x.eth"), handlers, {
+      resolveStepMs: 100,
+    });
+    expect(out).toEqual(content("ipfs", "bafy"));
+    expect(calls).toBe(1);
+  });
+
+  test("caller signal abort propagates without ResolveTimeout wrap", async () => {
+    const ctrl = new AbortController();
+    const handlers: Handlers = {
+      resolvers: { ipns: delayedResolver(1_000, content("ipfs", "bafy")) },
+      fetchers: {},
+    };
+    setTimeout(() => ctrl.abort(new Error("user cancel")), 10);
+    await expect(
+      resolveReference(addr("ipns", "k51"), handlers, {
+        resolveStepMs: 5_000,
+        signal: ctrl.signal,
+      }),
+    )
+      .rejects
+      .toMatchObject({ message: "user cancel" });
+  });
+});
+
 describe("fetchReference", () => {
   test("resolves then invokes fetcher with terminal ref + path", async () => {
     const fetchFn = vi.fn(async () => new Response("hi", { status: 200 }));
@@ -128,5 +208,30 @@ describe("fetchReference", () => {
     const handlers: Handlers = { resolvers: {}, fetchers: {} };
     await expect(fetchReference(content("ipfs", "bafy"), "/", handlers)).rejects
       .toBeInstanceOf(NoHandler);
+  });
+
+  test("slow fetch exceeds fetchTimeoutMs → FetchTimeout", async () => {
+    const handlers: Handlers = {
+      resolvers: {},
+      fetchers: {
+        ipfs: {
+          protocol: "ipfs",
+          fetch: (_ref, _path, opts) =>
+            new Promise((_resolve, reject) => {
+              opts?.signal?.addEventListener("abort", () =>
+                reject(
+                  opts.signal!.reason ?? new Error("aborted"),
+                ));
+            }),
+        },
+      },
+    };
+    await expect(
+      fetchReference(content("ipfs", "bafy"), "/", handlers, {
+        fetchTimeoutMs: 50,
+      }),
+    )
+      .rejects
+      .toBeInstanceOf(FetchTimeout);
   });
 });

@@ -28,10 +28,13 @@ export function createIpnsResolverFromImpl(
     protocol: "ipns",
     async resolve(
       ref: AddressReference<"ipns">,
+      opts?: { signal?: AbortSignal; },
     ): Promise<ContentReference<"ipfs">> {
       try {
         const key = CID.parse(ref.value) as ResolverKey;
-        const resolved = await impl.resolve(key);
+        const resolved = opts?.signal
+          ? await impl.resolve(key, { signal: opts.signal })
+          : await impl.resolve(key);
         return {
           kind: "content",
           protocol: "ipfs",

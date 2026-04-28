@@ -1,4 +1,9 @@
-import { NoHandler, ResolutionLoop } from "./errors.js";
+import {
+  FetchTimeout,
+  NoHandler,
+  ResolutionLoop,
+  ResolveTimeout,
+} from "./errors.js";
 import type {
   AddressReference,
   ContentReference,
@@ -9,9 +14,21 @@ import type {
 export interface ResolveOpts {
   maxHops?: number;
   onHop?: (from: Reference, to: Reference) => void;
+  resolveStepMs?: number;
+  fetchTimeoutMs?: number;
+  signal?: AbortSignal;
 }
 
 const DEFAULT_MAX_HOPS = 8;
+
+function composeSignals(
+  caller: AbortSignal | undefined,
+  step: AbortSignal | undefined,
+): AbortSignal | undefined {
+  if (!step) return caller;
+  if (!caller) return step;
+  return AbortSignal.any([caller, step]);
+}
 
 export async function resolveReference(
   start: Reference,
@@ -24,7 +41,23 @@ export async function resolveReference(
     if (current.kind === "content") return current;
     const resolver = handlers.resolvers[current.protocol];
     if (!resolver) throw new NoHandler(current);
-    const next = await resolver.resolve(current as AddressReference);
+
+    const stepSignal = opts.resolveStepMs != null
+      ? AbortSignal.timeout(opts.resolveStepMs)
+      : undefined;
+    const signal = composeSignals(opts.signal, stepSignal);
+
+    let next: Reference;
+    try {
+      next = signal
+        ? await resolver.resolve(current as AddressReference, { signal })
+        : await resolver.resolve(current as AddressReference);
+    } catch (cause) {
+      if (stepSignal?.aborted && !opts.signal?.aborted) {
+        throw new ResolveTimeout(current, opts.resolveStepMs!);
+      }
+      throw cause;
+    }
     opts.onHop?.(current, next);
     current = next;
   }
@@ -41,5 +74,20 @@ export async function fetchReference(
   const terminal = await resolveReference(start, handlers, opts);
   const fetcher = handlers.fetchers[terminal.protocol];
   if (!fetcher) throw new NoHandler(terminal);
-  return fetcher.fetch(terminal, path);
+
+  const fetchSig = opts?.fetchTimeoutMs != null
+    ? AbortSignal.timeout(opts.fetchTimeoutMs)
+    : undefined;
+  const signal = composeSignals(opts?.signal, fetchSig);
+
+  try {
+    return signal
+      ? await fetcher.fetch(terminal, path, { signal })
+      : await fetcher.fetch(terminal, path);
+  } catch (cause) {
+    if (fetchSig?.aborted && !opts?.signal?.aborted) {
+      throw new FetchTimeout(terminal, opts!.fetchTimeoutMs!);
+    }
+    throw cause;
+  }
 }
