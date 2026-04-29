@@ -57,11 +57,10 @@ test.describe("content-sw absorption", () => {
     });
   });
 
-  // Update-flow e2e (spec §5): "swap fixture content → close tabs → reopen →
-  // assert new SW absorbed" is deferred. Requires runtime contenthash mutation
-  // in test/e2e/fixtures/rpc.ts; the fixture closes over an immutable map.
-  // Tracked in docs/todo.md. The cold-start re-absorption path is exercised
-  // by the "hard reload" test above.
+  // Update-flow e2e: "swap fixture content → close tabs → reopen → assert new
+  // SW absorbed" is deferred. Requires runtime contenthash mutation in
+  // test/e2e/fixtures/rpc.ts; the fixture closes over an immutable map. The
+  // cold-start re-absorption path is exercised by the "hard reload" test above.
 
   test("cross-origin fetch goes through real network, not absorbed shim", async ({ page }) => {
     await page.goto(`${SITE}/`);

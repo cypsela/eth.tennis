@@ -85,12 +85,6 @@ Any static host works. TLS must cover every subname depth the gateway is
 expected to serve (`*.eth.<domain>`, `*.*.eth.<domain>`, and so on for
 ENSIP-10 subnames like `app.vitalik.eth.<domain>`).
 
-## Design
-
-Full design spec — architecture, trust model, failure classes, caching,
-content-SW interop, scope boundaries — in
-[`docs/superpowers/specs/2026-04-17-eth-tennis-design.md`](docs/superpowers/specs/2026-04-17-eth-tennis-design.md).
-
 ## Status
 
 v1 in active development. End-to-end working: `ipfs://` contenthashes,

@@ -13,7 +13,6 @@
     "packages/*/test/**/*.ts",
     "packages/*/readme.md",
     "readme.md",
-    "docs/**/*.md",
     "dprint.jsonc",
   ],
   "excludes": [

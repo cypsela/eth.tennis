@@ -1,6 +1,7 @@
 node_modules
 dist
 .dist
+/docs
 packages/gateway-sw-core/docs
 *.log
 .DS_Store
