@@ -27,4 +27,4 @@ export {
   isAbsorbRequest,
 } from "./protocol/messages.js";
 
-export { PAGE_SHIM_HASH, PAGE_SHIM_SRC } from "./shim-bundle.js";
+export { PAGE_SHIM_SRC } from "./shim-bundle.js";

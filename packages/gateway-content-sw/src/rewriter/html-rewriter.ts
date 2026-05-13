@@ -1,8 +1,5 @@
-import { addInlineScriptHash } from "./csp.js";
-
 export interface RewriteOpts {
   pageShimSrc: string;
-  pageShimHash: string;
 }
 
 export function rewriteHtmlForContentSw(
@@ -21,9 +18,7 @@ export function rewriteHtmlForContentSw(
     },
   });
 
-  const transformed = stream.pipeThrough(
-    makeRewriteStream(shimTag, opts.pageShimHash),
-  );
+  const transformed = stream.pipeThrough(makeRewriteStream(shimTag));
   return new Response(transformed, {
     status: response.status,
     statusText: response.statusText,
@@ -33,7 +28,6 @@ export function rewriteHtmlForContentSw(
 
 function makeRewriteStream(
   shimTag: string,
-  hash: string,
 ): TransformStream<Uint8Array, Uint8Array> {
   const decoder = new TextDecoder();
   const encoder = new TextEncoder();
@@ -43,7 +37,7 @@ function makeRewriteStream(
     transform(chunk, controller) {
       buffered += decoder.decode(chunk, { stream: true });
       if (!injected) {
-        const out = tryInject(buffered, shimTag, hash);
+        const out = tryInject(buffered, shimTag);
         if (out) {
           controller.enqueue(encoder.encode(out.text));
           buffered = out.tail;
@@ -56,7 +50,7 @@ function makeRewriteStream(
     },
     flush(controller) {
       if (!injected) {
-        const out = tryInject(buffered, shimTag, hash)
+        const out = tryInject(buffered, shimTag)
           ?? { text: buffered, tail: "" };
         controller.enqueue(encoder.encode(out.text + out.tail));
       } else if (buffered.length) {
@@ -69,28 +63,18 @@ function makeRewriteStream(
 function tryInject(
   buf: string,
   shimTag: string,
-  hash: string,
 ): { text: string; tail: string; } | null {
-  const updated = updateCspMeta(buf, hash);
-  const headIdx = updated.indexOf("<head>");
+  const headIdx = buf.indexOf("<head>");
   if (headIdx !== -1) {
     const cut = headIdx + "<head>".length;
-    return { text: updated.slice(0, cut) + shimTag, tail: updated.slice(cut) };
+    return { text: buf.slice(0, cut) + shimTag, tail: buf.slice(cut) };
   }
-  const scriptIdx = updated.indexOf("<script");
+  const scriptIdx = buf.indexOf("<script");
   if (scriptIdx !== -1) {
     return {
-      text: updated.slice(0, scriptIdx) + shimTag,
-      tail: updated.slice(scriptIdx),
+      text: buf.slice(0, scriptIdx) + shimTag,
+      tail: buf.slice(scriptIdx),
     };
   }
   return null;
-}
-
-function updateCspMeta(buf: string, hash: string): string {
-  return buf.replace(
-    /(<meta[^>]+http-equiv=["']Content-Security-Policy["'][^>]+content=["'])([^"']+)(["'])/i,
-    (_m, pre, content, post) =>
-      `${pre}${addInlineScriptHash(content, hash)}${post}`,
-  );
 }

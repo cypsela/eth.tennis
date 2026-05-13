@@ -1,7 +1,7 @@
 import { describe, expect, test } from "vitest";
 import { rewriteHtmlForContentSw } from "../src/rewriter/html-rewriter.js";
 
-const opts = { pageShimSrc: "/* SHIM */", pageShimHash: "abc123" };
+const opts = { pageShimSrc: "/* SHIM */" };
 
 describe("rewriteHtmlForContentSw", () => {
   test("non-HTML response passes through", async () => {
@@ -33,15 +33,20 @@ describe("rewriteHtmlForContentSw", () => {
     expect(text.indexOf("/* SHIM */")).toBeLessThan(text.indexOf("x()"));
   });
 
-  test("updates existing meta CSP with sha256 hash", async () => {
+  test("leaves meta CSP untouched", async () => {
+    const csp =
+      `worker-src &#x27;self&#x27; blob:; script-src &#x27;self&#x27; &#x27;unsafe-inline&#x27;`;
     const html =
-      `<head><meta http-equiv="Content-Security-Policy" content="script-src 'self'"></head><body></body>`;
+      `<head><meta http-equiv="Content-Security-Policy" content="${csp}"></head><body></body>`;
     const out = rewriteHtmlForContentSw(
       new Response(html, { headers: { "content-type": "text/html" } }),
       opts,
     );
     const text = await out.text();
-    expect(text).toContain("'sha256-abc123'");
+    expect(text).toContain(`content="${csp}"`);
+    expect(text.indexOf("<script>/* SHIM */</script>")).toBeLessThan(
+      text.indexOf("<meta http-equiv="),
+    );
   });
 
   test("preserves response status and other headers", async () => {

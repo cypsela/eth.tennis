@@ -1,7 +1,6 @@
 /// <reference lib="webworker" />
 import {
   installContentSw,
-  PAGE_SHIM_HASH,
   PAGE_SHIM_SRC,
   rewriteHtmlForContentSw,
 } from "@cypsela/gateway-content-sw";
@@ -353,8 +352,5 @@ async function gatewayDefaultFetch(
   if (event.request.mode === "navigate") {
     runtime.updateCheck.run(ensName).catch(() => {});
   }
-  return rewriteHtmlForContentSw(response, {
-    pageShimSrc: PAGE_SHIM_SRC,
-    pageShimHash: PAGE_SHIM_HASH,
-  });
+  return rewriteHtmlForContentSw(response, { pageShimSrc: PAGE_SHIM_SRC });
 }
