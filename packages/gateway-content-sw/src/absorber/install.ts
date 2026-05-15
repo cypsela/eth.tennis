@@ -34,6 +34,8 @@ export function installContentSw(integration: ContentSwIntegration): void {
 
   scope.addEventListener("fetch", (event) => {
     if (dispatcher.handle(event)) return;
+    const url = new URL(event.request.url);
+    if (url.origin !== scope.location.origin) return;
     event.respondWith(integration.defaultFetch(event));
   });
 

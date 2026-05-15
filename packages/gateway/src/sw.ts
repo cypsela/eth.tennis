@@ -306,9 +306,6 @@ async function gatewayDefaultFetch(
 ): Promise<Response> {
   const url = new URL(event.request.url);
 
-  if (url.origin !== sw.location.origin) {
-    return fetch(event.request);
-  }
   if (isShellAsset(url.pathname)) {
     const cache = await caches.open(CACHE_VERSION);
     const hit = await cache.match(url.pathname);

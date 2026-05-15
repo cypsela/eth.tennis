@@ -126,6 +126,29 @@ describe("absorb composed flow", () => {
     expect(defaultFetch).toHaveBeenCalled();
   });
 
+  test("does not intercept cross-origin requests when no absorbed listener claims them", async () => {
+    const { scope, listeners } = makeMockScope();
+    const defaultFetch = vi.fn(async () => new Response("from-gateway"));
+    installContentSw({
+      scope,
+      readSwState: () => null,
+      writeSwState: vi.fn(),
+      fetchSwScript: async () => new Uint8Array(),
+      sameOriginFetch: vi.fn(async () => new Response()),
+      defaultFetch,
+      importModule: async (
+        _bytes: Uint8Array,
+        _self: ServiceWorkerGlobalScope,
+        _fetch: typeof globalThis.fetch,
+      ) => {},
+    });
+    const fetchListener = listeners.find((l) => l.type === "fetch");
+    const ev = makeMockFetchEvent(new Request("https://other.example/x"));
+    (fetchListener?.fn as (e: FetchEvent) => void)(ev);
+    expect(ev.responded()).toBeNull();
+    expect(defaultFetch).not.toHaveBeenCalled();
+  });
+
   test("absorbed listener routes same-origin fetch through sameOriginFetch and cross-origin through realFetch", async () => {
     const { scope, listeners } = makeMockScope();
     const sameOriginResponse = new Response("from-gateway");
