@@ -21,6 +21,7 @@ import {
 } from "@cypsela/gateway-sw-core";
 import type { Helia } from "@helia/interface";
 
+import { errorToResponse } from "./error-response.ts";
 import { logErrorTree } from "./log-error.ts";
 import { createMountPolicy, type MountPolicy } from "./mount-policy.ts";
 import { createEnsurePinned, type EnsurePinned } from "./pinning.ts";
@@ -332,8 +333,17 @@ async function gatewayDefaultFetch(
       FETCH_BUDGET,
     );
   } catch (err) {
-    console.error(err);
-    return new Response(String(err), { status: 500 });
+    logErrorTree(
+      `[gateway] fetch failed for ${
+        formatRef(
+          mount
+            .current
+            .ref,
+        )
+      }${url.pathname}:`,
+      err,
+    );
+    return errorToResponse(err);
   }
   if (response.status === 412 || response.status === 504) {
     console.warn(
