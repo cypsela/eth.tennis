@@ -17,3 +17,4 @@ playwright-report
 test-results
 .vite
 .worktrees
+.playwright-mcp
