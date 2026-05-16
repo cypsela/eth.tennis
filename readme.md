@@ -47,9 +47,9 @@ status.
 | `packages/gateway-sw-core` | `@cypsela/gateway-sw-core` | MIT           | Reusable SW primitives: ENS resolution, verified-fetch dispatch, errors. |
 | `packages/gateway`         | `@cypsela/gateway`         | AGPL-3.0-only | Deployable site (bootstrap + SW entrypoint). Private; not published.     |
 
-Content authors who want to run their own SW without losing gateway
-resolution can `import { install } from '@cypsela/gateway-sw-core'` and
-layer their fetch handler on top.
+Content authors who want gateway resolution in their own SW can build on
+`@cypsela/gateway-sw-core`, which packages ENS resolution and verified-fetch
+dispatch as composable primitives.
 
 ## Develop
 
@@ -88,6 +88,5 @@ ENSIP-10 subnames like `app.vitalik.eth.<domain>`).
 ## Status
 
 v1 in active development. End-to-end working: `ipfs://` contenthashes,
-libp2p-key `ipns://` contenthashes, subnames, CCIP-read. Known limitations
-(`ipns://<dnslink-name>` contenthashes, fetch timeouts) are tracked against
-the spec.
+`ipns://` contenthashes (libp2p-key and DNSLink), subnames, CCIP-read.
+Fetch timeouts remain a known limitation tracked against the spec.

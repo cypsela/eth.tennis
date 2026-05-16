@@ -8,17 +8,14 @@ ENS resolution + `@helia/verified-fetch` primitives packaged as an ESM service-w
 npm i @cypsela/gateway-sw-core
 ```
 
-## Usage (content-site SW that wants gateway behaviour as a fallback)
+## Usage
 
-```ts
-// content-sw.js — registered with { type: 'module' }
-import { install } from "@cypsela/gateway-sw-core";
+`@cypsela/gateway-sw-core` is a toolkit of composable primitives — ENS, IPNS
+and DNSLink resolvers, an IPFS verified-fetch dispatcher, the resolve→fetch
+chain, Helia setup, an SWR cache, and the typed `ErrorClass` errors. There is
+no single-call installer; you wire the pieces into your own service worker.
 
-install(self);
-```
-
-When no earlier `fetch` handler calls `respondWith`, the gateway's fallback
-resolves the current origin's ENS name and serves content via verified-fetch.
+See `packages/gateway/src/sw.ts` for the reference integration.
 
 ## API
 
