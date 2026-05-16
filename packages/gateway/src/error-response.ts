@@ -35,15 +35,16 @@ const STATUS: Record<ErrorClass, number> = {
 /**
  * Build a Response from a thrown gateway error.
  *
- * Body is `<errorClass>: <message>`, matching the line format the bootstrap
- * terminal prints. The `x-gateway-error-class` header gives tooling a stable
+ * Body is `<errorClass>: <message>`, or just `<errorClass>` when the error
+ * carries no extra detail — matching the line format the bootstrap terminal
+ * prints. The `x-gateway-error-class` header gives tooling a stable
  * machine-readable handle that doesn't depend on parsing the body.
  */
 export function errorToResponse(err: unknown): Response {
   const errorClass: ErrorClass =
     (err as { errorClass?: ErrorClass; }).errorClass ?? "unknown-error";
   const detail = err instanceof Error ? err.message : String(err);
-  return new Response(`${errorClass}: ${detail}`, {
+  return new Response(detail ? `${errorClass}: ${detail}` : errorClass, {
     status: STATUS[errorClass],
     headers: {
       "content-type": "text/plain;charset=UTF-8",

@@ -251,7 +251,7 @@ sw.addEventListener("message", (event) => {
         source: "sw",
         level: "error",
         glyph: "✗",
-        text: `${errorClass}: ${detail}`,
+        text: detail ? `${errorClass}: ${detail}` : errorClass,
       });
       source?.postMessage({
         type: "error",

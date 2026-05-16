@@ -46,6 +46,11 @@ describe("errorToResponse", () => {
     expect(errorToResponse(err).status).toBe(504);
   });
 
+  test("error with no detail yields a bare errorClass body", async () => {
+    const err = new ContentUnreachable("vitalik.eth");
+    expect(await errorToResponse(err).text()).toBe("content-unreachable");
+  });
+
   test("IpnsRecordNotFound becomes 502", async () => {
     const err = new IpnsRecordNotFound("nick.eth", "k51qzi5uqu5dgccx");
     const r = errorToResponse(err);

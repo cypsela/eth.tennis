@@ -176,3 +176,28 @@ describe("FetchTimeout", () => {
     expect(err.message).toContain("bafy");
   });
 });
+
+describe("messages are context-only (no class-phrase duplication)", () => {
+  test("IpnsRecordNotFound message is just the ipns name", () => {
+    expect(new IpnsRecordNotFound("vitalik.eth", "k51").message).toBe("k51");
+  });
+
+  test("ContentUnreachable message is empty when there is no cause", () => {
+    expect(new ContentUnreachable("vitalik.eth").message).toBe("");
+  });
+
+  test("ContentUnreachable message is just the cause text", () => {
+    const err = new ContentUnreachable("vitalik.eth", new Error("offline"));
+    expect(err.message).toBe("offline");
+  });
+
+  test("IpnsResolveFailed pairs the ipns name with the cause", () => {
+    const err = new IpnsResolveFailed("vitalik.eth", "k51", new Error("nope"));
+    expect(err.message).toBe("(k51) nope");
+  });
+
+  test("NoHandler message is just the formatted ref", () => {
+    const ref = { kind: "address", protocol: "ens", value: "x.eth" } as const;
+    expect(new NoHandler(ref).message).toBe("ens://x.eth");
+  });
+});

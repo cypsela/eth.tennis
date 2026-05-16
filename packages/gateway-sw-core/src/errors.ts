@@ -19,7 +19,7 @@ export class IpnsRecordNotFound extends GatewayError {
     public readonly ipnsName: string,
     cause?: unknown,
   ) {
-    super(ensName, `ipns record not found: ${ipnsName}`);
+    super(ensName, ipnsName);
     if (cause !== undefined) {
       (this as { cause?: unknown; }).cause = cause;
     }
@@ -33,7 +33,7 @@ export class IpnsRecordUnverifiable extends GatewayError {
     public readonly ipnsName: string,
     cause?: unknown,
   ) {
-    super(ensName, `ipns record unverifiable: ${ipnsName}`);
+    super(ensName, ipnsName);
     if (cause !== undefined) {
       (this as { cause?: unknown; }).cause = cause;
     }
@@ -53,10 +53,7 @@ export class EnsResolveFailed extends GatewayError {
 export class NoHandler extends GatewayError {
   readonly errorClass = "no-handler" as const;
   constructor(public readonly ref: Reference) {
-    super(
-      ref.value,
-      `no handler registered for ${ref.protocol}://${ref.value}`,
-    );
+    super(ref.value, `${ref.protocol}://${ref.value}`);
   }
 }
 
@@ -86,12 +83,7 @@ export class IpnsResolveFailed extends GatewayError {
       : cause != null
       ? String(cause)
       : "";
-    super(
-      ensName,
-      causeMsg
-        ? `ipns resolve failed (${ipnsName}): ${causeMsg}`
-        : `ipns resolve failed: ${ipnsName}`,
-    );
+    super(ensName, causeMsg ? `(${ipnsName}) ${causeMsg}` : ipnsName);
     if (cause !== undefined) {
       (this as { cause?: unknown; }).cause = cause;
     }
@@ -106,10 +98,7 @@ export class ContentUnreachable extends GatewayError {
       : cause != null
       ? String(cause)
       : "";
-    super(
-      ensName,
-      causeMsg ? `content unreachable: ${causeMsg}` : "content unreachable",
-    );
+    super(ensName, causeMsg);
     if (cause !== undefined) {
       (this as { cause?: unknown; }).cause = cause;
     }
@@ -124,7 +113,7 @@ export class UnknownError extends GatewayError {
       : cause != null
       ? String(cause)
       : "";
-    super(ensName, causeMsg ? `unknown error: ${causeMsg}` : "unknown error");
+    super(ensName, causeMsg);
     if (cause !== undefined) {
       (this as { cause?: unknown; }).cause = cause;
     }
@@ -134,7 +123,7 @@ export class UnknownError extends GatewayError {
 export class IpnsAddressUnrecognized extends GatewayError {
   readonly errorClass = "ipns-address-unrecognized" as const;
   constructor(ensName: string, public readonly ipnsAddress: string) {
-    super(ensName, `ipns address unrecognized: ${ipnsAddress}`);
+    super(ensName, ipnsAddress);
   }
 }
 
@@ -145,7 +134,7 @@ export class DnslinkRecordNotFound extends GatewayError {
     public readonly domain: string,
     cause?: unknown,
   ) {
-    super(ensName, `dnslink record not found: ${domain}`);
+    super(ensName, domain);
     if (cause !== undefined) {
       (this as { cause?: unknown; }).cause = cause;
     }
@@ -164,12 +153,7 @@ export class DnslinkResolveFailed extends GatewayError {
       : cause != null
       ? String(cause)
       : "";
-    super(
-      ensName,
-      causeMsg
-        ? `dnslink resolve failed (${domain}): ${causeMsg}`
-        : `dnslink resolve failed: ${domain}`,
-    );
+    super(ensName, causeMsg ? `(${domain}) ${causeMsg}` : domain);
     if (cause !== undefined) {
       (this as { cause?: unknown; }).cause = cause;
     }
@@ -182,10 +166,7 @@ export class ResolveTimeout extends GatewayError {
     public readonly ref: Reference,
     public readonly budgetMs: number,
   ) {
-    super(
-      ref.value,
-      `resolve timeout: ${ref.protocol}://${ref.value} after ${budgetMs}ms`,
-    );
+    super(ref.value, `${ref.protocol}://${ref.value} after ${budgetMs}ms`);
   }
 }
 
@@ -195,9 +176,6 @@ export class FetchTimeout extends GatewayError {
     public readonly ref: Reference,
     public readonly budgetMs: number,
   ) {
-    super(
-      ref.value,
-      `fetch timeout: ${ref.protocol}://${ref.value} after ${budgetMs}ms`,
-    );
+    super(ref.value, `${ref.protocol}://${ref.value} after ${budgetMs}ms`);
   }
 }
