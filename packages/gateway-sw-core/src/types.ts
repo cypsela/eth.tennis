@@ -72,7 +72,7 @@ export interface ContentFetcher<P extends string = string> {
   fetch(
     ref: ContentReference<P>,
     path: string,
-    options?: { signal?: AbortSignal; },
+    options?: { signal?: AbortSignal; redirect?: "follow" | "manual"; },
   ): Promise<Response>;
 }
 

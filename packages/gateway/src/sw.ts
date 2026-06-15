@@ -25,6 +25,7 @@ import { errorToResponse } from "./error-response.ts";
 import { logErrorTree } from "./log-error.ts";
 import { createMountPolicy, type MountPolicy } from "./mount-policy.ts";
 import { createEnsurePinned, type EnsurePinned } from "./pinning.ts";
+import { isRedirectStatus, toSameOriginRedirect } from "./redirect.ts";
 import { createUpdateCheck, type UpdateCheck } from "./update-check.ts";
 
 declare const __SHELL_ASSETS__: string[];
@@ -324,13 +325,17 @@ async function gatewayDefaultFetch(
     return shell?.clone() ?? fetch("/");
   }
 
+  // Navigations ask verified-fetch to surface a site's `_redirects` 3xx rules
+  // as real redirects (handled below); subresources keep following internally.
+  const isNavigation = event.request.mode === "navigate";
+
   let response: Response;
   try {
     response = await fetchReference(
       mount.current.ref,
       url.pathname,
       runtime.handlers,
-      FETCH_BUDGET,
+      isNavigation ? { ...FETCH_BUDGET, redirect: "manual" } : FETCH_BUDGET,
     );
   } catch (err) {
     logErrorTree(
@@ -345,6 +350,15 @@ async function gatewayDefaultFetch(
     );
     return errorToResponse(err);
   }
+
+  // A `_redirects` rule fired: hand the browser a real redirect so the URL (and
+  // any query the rule appended) updates. verified-fetch points Location at
+  // ipfs://<cid>/...; rewrite it onto this origin. Only navigations request
+  // `redirect: "manual"`, so subresources never reach here.
+  if (isRedirectStatus(response.status)) {
+    return toSameOriginRedirect(response, url.origin);
+  }
+
   if (response.status === 412 || response.status === 504) {
     console.warn(
       `[gateway] block unreachable: ${
@@ -356,7 +370,7 @@ async function gatewayDefaultFetch(
       }${url.pathname} (${response.status})`,
     );
   }
-  if (event.request.mode === "navigate") {
+  if (isNavigation) {
     runtime.updateCheck.run(ensName).catch(() => {});
   }
   return rewriteHtmlForContentSw(response, { pageShimSrc: PAGE_SHIM_SRC });

@@ -25,11 +25,15 @@ export function createIpfsFetcherFromImpl(
     async fetch(
       ref: ContentReference<"ipfs">,
       path: string,
-      opts?: { signal?: AbortSignal; },
+      opts?: { signal?: AbortSignal; redirect?: "follow" | "manual"; },
     ): Promise<Response> {
       const p = path.startsWith("/") ? path : `/${path}`;
       const url = `ipfs://${ref.value}${p}`;
-      return opts?.signal ? impl(url, { signal: opts.signal }) : impl(url);
+      const init: { signal?: AbortSignal; redirect?: "follow" | "manual"; } =
+        {};
+      if (opts?.signal) init.signal = opts.signal;
+      if (opts?.redirect) init.redirect = opts.redirect;
+      return Object.keys(init).length > 0 ? impl(url, init) : impl(url);
     },
   };
 }

@@ -63,4 +63,43 @@ describe("ipfs fetcher", () => {
     );
     expect([r1.status, r2.status, r3.status]).toEqual([404, 412, 504]);
   });
+
+  test("forwards the redirect option to verified-fetch", async () => {
+    const impl = vi.fn(async () =>
+      new Response(null, {
+        status: 302,
+        headers: { location: "ipfs://bafy/dest" },
+      })
+    );
+    const f = createIpfsFetcherFromImpl(impl as any);
+    await f.fetch(
+      { kind: "content", protocol: "ipfs", value: "bafy" },
+      "/src",
+      { redirect: "manual" },
+    );
+    expect(impl).toHaveBeenCalledWith("ipfs://bafy/src", {
+      redirect: "manual",
+    });
+  });
+
+  test("forwards both signal and redirect when provided", async () => {
+    const impl = vi.fn(async () => new Response("ok", { status: 200 }));
+    const f = createIpfsFetcherFromImpl(impl as any);
+    const ctrl = new AbortController();
+    await f.fetch({ kind: "content", protocol: "ipfs", value: "bafy" }, "/x", {
+      signal: ctrl.signal,
+      redirect: "manual",
+    });
+    expect(impl).toHaveBeenCalledWith("ipfs://bafy/x", {
+      signal: ctrl.signal,
+      redirect: "manual",
+    });
+  });
+
+  test("omits the options object when neither signal nor redirect given", async () => {
+    const impl = vi.fn(async () => new Response("ok", { status: 200 }));
+    const f = createIpfsFetcherFromImpl(impl as any);
+    await f.fetch({ kind: "content", protocol: "ipfs", value: "bafy" }, "/y");
+    expect(impl).toHaveBeenCalledWith("ipfs://bafy/y");
+  });
 });

@@ -234,4 +234,28 @@ describe("fetchReference", () => {
       .rejects
       .toBeInstanceOf(FetchTimeout);
   });
+
+  test("forwards the redirect option to the fetcher", async () => {
+    const fetchFn = vi.fn(async () => new Response(null, { status: 302 }));
+    const handlers: Handlers = {
+      resolvers: {},
+      fetchers: { ipfs: { protocol: "ipfs", fetch: fetchFn } },
+    };
+    await fetchReference(content("ipfs", "bafy"), "/n", handlers, {
+      redirect: "manual",
+    });
+    expect(fetchFn).toHaveBeenCalledWith(content("ipfs", "bafy"), "/n", {
+      redirect: "manual",
+    });
+  });
+
+  test("omits the fetch options object when no signal or redirect", async () => {
+    const fetchFn = vi.fn(async () => new Response("ok", { status: 200 }));
+    const handlers: Handlers = {
+      resolvers: {},
+      fetchers: { ipfs: { protocol: "ipfs", fetch: fetchFn } },
+    };
+    await fetchReference(content("ipfs", "bafy"), "/n", handlers);
+    expect(fetchFn).toHaveBeenCalledWith(content("ipfs", "bafy"), "/n");
+  });
 });

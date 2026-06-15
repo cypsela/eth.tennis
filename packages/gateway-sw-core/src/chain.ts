@@ -17,6 +17,12 @@ export interface ResolveOpts {
   resolveStepMs?: number;
   fetchTimeoutMs?: number;
   signal?: AbortSignal;
+  /**
+   * Forwarded to the content fetcher. `"manual"` makes verified-fetch return a
+   * site's `_redirects` 3xx rules as real redirect responses instead of
+   * following them internally; the default (unset) preserves follow behaviour.
+   */
+  redirect?: "follow" | "manual";
 }
 
 const DEFAULT_MAX_HOPS = 8;
@@ -80,9 +86,14 @@ export async function fetchReference(
     : undefined;
   const signal = composeSignals(opts?.signal, fetchSig);
 
+  const fetchOpts: { signal?: AbortSignal; redirect?: "follow" | "manual"; } =
+    {};
+  if (signal) fetchOpts.signal = signal;
+  if (opts?.redirect) fetchOpts.redirect = opts.redirect;
+
   try {
-    return signal
-      ? await fetcher.fetch(terminal, path, { signal })
+    return fetchOpts.signal !== undefined || fetchOpts.redirect !== undefined
+      ? await fetcher.fetch(terminal, path, fetchOpts)
       : await fetcher.fetch(terminal, path);
   } catch (cause) {
     if (fetchSig?.aborted && !opts?.signal?.aborted) {
