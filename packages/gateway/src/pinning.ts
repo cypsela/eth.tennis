@@ -4,6 +4,7 @@ import type { CID } from "multiformats/cid";
 export interface PinHooks {
   onSuccess?: () => void;
   onFailure?: (err: unknown) => void;
+  onProgress?: (evt: { type: string; detail: unknown; }) => void;
 }
 
 export async function fetchRootThenDrain(
@@ -11,9 +12,17 @@ export async function fetchRootThenDrain(
   cid: CID,
   hooks?: PinHooks,
 ): Promise<void> {
+  const addOpts = hooks?.onProgress
+    ? {
+      onProgress: (evt: unknown) =>
+        hooks.onProgress!(evt as { type: string; detail: unknown; }),
+    }
+    : undefined;
   let iter: AsyncGenerator<CID>;
   try {
-    iter = helia.pins.add(cid);
+    iter = addOpts
+      ? helia.pins.add(cid, addOpts as never)
+      : helia.pins.add(cid);
     await iter.next();
   } catch (err) {
     if (err instanceof Error && err.name === "AlreadyPinnedError") {
@@ -53,6 +62,9 @@ export function createEnsurePinned(helia: Pick<Helia, "pins">): EnsurePinned {
     }
     const allHooks: PinHooks[] = hooks ? [hooks] : [];
     const promise = fetchRootThenDrain(helia, cid, {
+      onProgress: (evt) => {
+        for (const h of allHooks) h.onProgress?.(evt);
+      },
       onSuccess: () => {
         completed.add(k);
         inflight.delete(k);

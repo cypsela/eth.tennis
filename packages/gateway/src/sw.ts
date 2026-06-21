@@ -26,6 +26,7 @@ import { errorToResponse } from "./error-response.ts";
 import { logErrorTree } from "./log-error.ts";
 import { createMountPolicy, type MountPolicy } from "./mount-policy.ts";
 import { createEnsurePinned, type EnsurePinned } from "./pinning.ts";
+import { progressEventToLine } from "./progress.ts";
 import { isRedirectStatus, toSameOriginRedirect } from "./redirect.ts";
 import { createUpdateCheck, type UpdateCheck } from "./update-check.ts";
 
@@ -214,8 +215,21 @@ sw.addEventListener("message", (event) => {
         text: `fetching ${formatRef(fresh)}`,
       });
       const { CID } = await import("multiformats/cid");
+      let lastProgressLine = "";
       try {
         await ensurePinned(CID.parse(fresh.value), {
+          onProgress: (evt) => {
+            const line = progressEventToLine(evt.type, evt.detail);
+            if (!line || line === lastProgressLine) return;
+            lastProgressLine = line;
+            source?.postMessage({
+              type: "log",
+              source: "sw",
+              level: "info",
+              glyph: "↳",
+              text: line,
+            });
+          },
           onSuccess: () =>
             console.info(
               `[gateway] ${ensName} fully pinned (${formatRef(fresh)})`,
