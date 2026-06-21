@@ -87,7 +87,13 @@ async function runColdStart(terminal: Terminal, startedAt: number) {
   const payload: BootstrapToSw = { type: "resolve-and-fetch", ensName, path };
   ctrl.postMessage(payload);
 
-  const final = await doneP;
+  terminal.showSpinner();
+  let final: SwToBootstrap;
+  try {
+    final = await doneP;
+  } finally {
+    terminal.hideSpinner();
+  }
   if (final.type === "done") {
     location.reload();
   }

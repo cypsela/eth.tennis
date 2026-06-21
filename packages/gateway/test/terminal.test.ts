@@ -37,4 +37,16 @@ describe("Terminal", () => {
     const line = host.querySelector(".line")!;
     expect(line.classList.contains("level-error")).toBe(true);
   });
+
+  test("showSpinner adds one spinner line; hideSpinner removes it", () => {
+    document.body.innerHTML = "<main id=\"terminal\"></main>";
+    const host = document.getElementById("terminal")!;
+    const term = new Terminal(host);
+    term.showSpinner();
+    expect(host.querySelectorAll(".spinner")).toHaveLength(1);
+    term.showSpinner(); // idempotent
+    expect(host.querySelectorAll(".spinner")).toHaveLength(1);
+    term.hideSpinner();
+    expect(host.querySelectorAll(".spinner")).toHaveLength(0);
+  });
 });

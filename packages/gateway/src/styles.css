@@ -36,6 +36,23 @@ html, body {
 .line.source-bootstrap { }
 .line.source-sw { }
 
+.spinner::before {
+  content: "\2807"; /* braille base frame */
+  color: var(--src-sw);
+  animation: braille 0.8s steps(1) infinite;
+}
+@keyframes braille {
+  0%   { content: "\2807"; }
+  12%  { content: "\280B"; }
+  25%  { content: "\2819"; }
+  37%  { content: "\2838"; }
+  50%  { content: "\2834"; }
+  62%  { content: "\2826"; }
+  75%  { content: "\2827"; }
+  87%  { content: "\280F"; }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .line { animation: none; }
+  .spinner::before { animation: none; content: "\2807"; }
 }
