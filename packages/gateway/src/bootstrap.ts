@@ -1,5 +1,6 @@
 import type { BootstrapToSw, SwToBootstrap } from "@cypsela/gateway-sw-core";
 import { makeLogger } from "@cypsela/gateway-sw-core";
+import { fitFontSize } from "./fit.ts";
 import { Terminal } from "./terminal.ts";
 
 export type Mode = "cold-start" | "sw-unsupported";
@@ -115,6 +116,19 @@ function main() {
   const host = document.getElementById("terminal");
   if (!host) return;
   const terminal = new Terminal(host);
+
+  // Widest expected line: a `resolving ipns://<key> →` / `fetching ipfs://<cid>`
+  // row (timestamp + [sw] column pad + glyph + the protocol-prefixed ref, ~100
+  // cols) plus headroom for #terminal padding. Bump if a wider line is added.
+  const MAX_COLS = 104;
+  const applyFit = () => {
+    host.style.fontSize = `${
+      fitFontSize(document.documentElement.clientWidth, MAX_COLS)
+    }px`;
+  };
+  applyFit();
+  window.addEventListener("resize", applyFit);
+
   const startedAt = Date.now();
   const mode = detectMode();
 

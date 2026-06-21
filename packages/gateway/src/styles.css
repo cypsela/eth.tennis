@@ -22,12 +22,8 @@ html, body {
   line-height: 1.5;
 }
 
-#terminal {
-  padding: 16px;
-  white-space: pre;
-  overflow-y: auto;
-  min-height: 100vh;
-}
+#terminal { padding: 16px; width: 100%; white-space: pre; overflow-x: hidden; overflow-y: auto; min-height: 100vh; }
+@media (max-width: 600px) { #terminal { padding: 8px; } }
 
 .line { white-space: pre; }
 .line.level-error { color: var(--error); font-weight: 700; }
