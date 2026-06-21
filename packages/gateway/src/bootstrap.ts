@@ -122,8 +122,9 @@ function main() {
   // cols) plus headroom for #terminal padding. Bump if a wider line is added.
   const MAX_COLS = 104;
   const applyFit = () => {
+    const padding = 16; // #terminal horizontal padding (8px each side on mobile)
     host.style.fontSize = `${
-      fitFontSize(document.documentElement.clientWidth, MAX_COLS)
+      fitFontSize(document.documentElement.clientWidth - padding, MAX_COLS)
     }px`;
   };
   applyFit();

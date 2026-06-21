@@ -49,4 +49,25 @@ describe("Terminal", () => {
     term.hideSpinner();
     expect(host.querySelectorAll(".spinner")).toHaveLength(0);
   });
+
+  test("appended lines stay above the spinner; spinner remains last", () => {
+    document.body.innerHTML = "<main id=\"terminal\"></main>";
+    const host = document.getElementById("terminal")!;
+    const term = new Terminal(host);
+    term.showSpinner();
+    term.append({
+      t: 0,
+      source: "sw",
+      level: "info",
+      text: "after spinner",
+      glyph: ">",
+    });
+    const children = [...host.children];
+    expect(children[children.length - 1]!.classList.contains("spinner")).toBe(
+      true,
+    );
+    expect(host.querySelector(".line:not(.spinner)")!.textContent).toContain(
+      "after spinner",
+    );
+  });
 });

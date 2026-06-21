@@ -9,7 +9,11 @@ export class Terminal {
     const line = document.createElement("div");
     line.className = `line level-${entry.level} source-${entry.source}`;
     line.textContent = formatLine(entry);
-    this.host.appendChild(line);
+    if (this.spinnerEl) {
+      this.host.insertBefore(line, this.spinnerEl);
+    } else {
+      this.host.appendChild(line);
+    }
     this.host.scrollTop = this.host.scrollHeight;
 
     const consoleFn = entry.level === "error"

@@ -20,9 +20,7 @@ export async function fetchRootThenDrain(
     : undefined;
   let iter: AsyncGenerator<CID>;
   try {
-    iter = addOpts
-      ? helia.pins.add(cid, addOpts as never)
-      : helia.pins.add(cid);
+    iter = addOpts ? helia.pins.add(cid, addOpts) : helia.pins.add(cid);
     await iter.next();
   } catch (err) {
     if (err instanceof Error && err.name === "AlreadyPinnedError") {
