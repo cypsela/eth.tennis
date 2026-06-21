@@ -17,6 +17,7 @@ import {
   fetchReference,
   formatRef,
   type Handlers,
+  type Reference,
   type SwState,
 } from "@cypsela/gateway-sw-core";
 import type { Helia } from "@helia/interface";
@@ -186,25 +187,20 @@ sw.addEventListener("message", (event) => {
     try {
       const { bootstrapHandlers, ensurePinned, policy } = await getRuntime();
       const { resolveReference } = await import("@cypsela/gateway-sw-core");
-      source?.postMessage({
-        type: "log",
-        source: "sw",
-        level: "info",
-        glyph: ">",
-        text: `resolving ${ensName}`,
-      });
       const start = {
         kind: "address" as const,
         protocol: "ens",
         value: ensName,
       };
-      const onHop = (from: unknown, to: unknown) =>
+      const onHop = (from: Reference, _to: Reference) =>
         source?.postMessage({
           type: "log",
           source: "sw",
           level: "info",
-          glyph: "↳",
-          text: `${formatRef(from as never)} → ${formatRef(to as never)}`,
+          glyph: ">",
+          // Show only the hop's origin with a trailing arrow; the next line (the
+          // next hop, or the `fetching` line) reveals what it resolved to.
+          text: `resolving ${formatRef(from)} →`,
         });
       const fresh = await resolveReference(start, bootstrapHandlers, {
         onHop,

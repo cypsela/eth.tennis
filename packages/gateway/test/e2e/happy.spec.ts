@@ -24,9 +24,10 @@ test("cold first visit renders the site", async ({ page }) => {
     .toBeVisible();
   await page.waitForLoadState("networkidle");
   await expect(page.locator("h1")).toHaveText("hello vitalik");
-  expect(logs.some((l) => l.includes("ens://") && l.includes("ipfs://"))).toBe(
+  expect(logs.some((l) => l.includes("resolving ens://vitalik.eth →"))).toBe(
     true,
   );
+  expect(logs.some((l) => l.includes("fetching ipfs://"))).toBe(true);
 });
 
 test("warm subsequent visit skips the terminal", async ({ page }) => {
