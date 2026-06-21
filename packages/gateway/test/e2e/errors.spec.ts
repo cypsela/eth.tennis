@@ -67,7 +67,12 @@ test.describe("error paths", () => {
       });
     });
     await page.goto("http://weird.eth.tennis.localhost:5173/");
-    await expect(page.locator(".line.level-info").filter({ hasText: "bzz:" }))
+    // The new per-hop format emits "resolving <from> →" for each hop;
+    // ENS resolves to bzz:// and no handler exists for it, so the info
+    // line shows the ENS hop and the error line carries the bzz:// URL.
+    await expect(
+      page.locator(".line.level-info").filter({ hasText: "resolving ens:" }),
+    )
       .toBeVisible({ timeout: 10_000 });
     await expect(
       page.locator(".line.level-error").filter({ hasText: "no-handler" }),
