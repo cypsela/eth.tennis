@@ -1,2 +1,7 @@
 packages:
   - packages/*
+allowBuilds:
+  dprint: true
+  esbuild: true
+  iso-constants: false
+  node-datachannel: true
