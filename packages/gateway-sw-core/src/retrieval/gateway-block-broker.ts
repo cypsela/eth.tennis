@@ -14,6 +14,8 @@ import {
 const RAW_BLOCK_TYPE = "application/vnd.ipld.raw";
 const DEFAULT_MAX_BLOCK_SIZE = 2_097_152;
 const DEFAULT_HEDGE_AFTER_MS = 4_000;
+const MIN_ATTEMPTS = 3;
+const RETRY_PAUSE_MS = 500;
 
 export interface GatewayConfig extends GatewayLimits {
   /** Trustless gateway origin, e.g. `https://trustless-gateway.link`. */
@@ -48,8 +50,8 @@ interface Inflight {
  * Each gateway has its own limiter, so requests stay inside what that gateway
  * tolerates. A block goes to the primary unless the primary is saturated and a
  * later gateway can take it immediately. If a gateway fails, the next one is
- * tried; if it is merely slow, the next one is asked as well and the first
- * answer wins. Blocks are checked with `validateFn`, so gateways stay untrusted.
+ * tried, cycling until the block has had three tries; if it is merely slow, a
+ * different gateway is asked as well and the first answer wins. Blocks are checked with `validateFn`, so gateways stay untrusted.
  */
 export function gatewayBlockBroker(init: GatewayBlockBrokerInit): BlockBroker {
   const doFetch = init.fetch ?? ((url, opts) => globalThis.fetch(url, opts));
@@ -104,7 +106,12 @@ export function gatewayBlockBroker(init: GatewayBlockBrokerInit): BlockBroker {
     options: BlockRetrievalOptions,
     signal: AbortSignal,
   ): Promise<Uint8Array> {
-    const order = attemptOrder();
+    // Cycle through the gateways until every block has had MIN_ATTEMPTS
+    // tries, so a lone gateway gets retried instead of failing on one error.
+    const once = attemptOrder();
+    const order = [...once];
+    while (order.length < MIN_ATTEMPTS) order.push(...once);
+    order.length = Math.max(once.length, MIN_ATTEMPTS);
     // Aborts every attempt once one wins or the caller gives up.
     const attempts = new AbortController();
     const attemptSignal = AbortSignal.any([signal, attempts.signal]);
@@ -129,17 +136,27 @@ export function gatewayBlockBroker(init: GatewayBlockBrokerInit): BlockBroker {
           .limiter
           .run(() => {
             // The hedge clock starts when the request is sent, not while it
-            // waits in the limiter.
-            if (next < order.length) {
-              hedge = setTimeout(startNext, hedgeAfterMs);
-            }
+            // waits in the limiter. Only gateways not yet tried are hedged to.
+            if (next < once.length) hedge = setTimeout(startNext, hedgeAfterMs);
             return fetchRaw(gateway, cid, options, attemptSignal);
           }, attemptSignal)
           .then((block) => finish(() => resolve(block)), (err) => {
             running -= 1;
             if (signal.aborted) return finish(() => reject(err));
             errors.push(err);
-            if (next < order.length) return startNext();
+            if (next < order.length) {
+              // Pause before going back to a gateway that has already failed.
+              const repeat = next >= once.length;
+              if (!repeat) return startNext();
+              // Another attempt is still in flight: let it finish first.
+              if (running > 0) return;
+              clearTimeout(hedge);
+              hedge = setTimeout(
+                startNext,
+                RETRY_PAUSE_MS * (next - once.length + 1),
+              );
+              return;
+            }
             if (running === 0) {
               finish(() =>
                 reject(

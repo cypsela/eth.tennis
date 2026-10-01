@@ -23,22 +23,13 @@ describe("createGatewayHelia (smoke)", () => {
 });
 
 describe("gatewayRetrievalInit", () => {
-  test("defaults to trustless-gateway.link with filebase as backup", async () => {
+  test("defaults to trustless-gateway.link, capped below its stream limit", async () => {
     const { DEFAULT_GATEWAYS } = await import("../src/helia.js");
     expect(DEFAULT_GATEWAYS.map((g) => g.url)).toEqual([
       "https://trustless-gateway.link",
-      "https://ipfs.filebase.io",
     ]);
-  });
-
-  test("default limits stay inside what each gateway tolerates", async () => {
-    const { DEFAULT_GATEWAYS } = await import("../src/helia.js");
-    const [primary, backup] = DEFAULT_GATEWAYS;
-    // 100 concurrent HTTP/2 streams
-    expect(primary!.maxConcurrent).toBeLessThan(100);
-    // about 100 back to back, then a little under 2 per second
-    expect(backup!.burst).toBeLessThan(100);
-    expect(backup!.perSecond).toBeLessThan(2);
+    // the gateway allows 100 concurrent HTTP/2 streams
+    expect(DEFAULT_GATEWAYS[0]!.maxConcurrent).toBeLessThan(100);
   });
 
   test("retrieves only through the gateways: no delegated routing", async () => {

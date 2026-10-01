@@ -35,6 +35,20 @@ function broker(
 }
 
 describe("gatewayBlockBroker", () => {
+  function slowPrimary(primaryMs: number, backup: () => Promise<Response>) {
+    return vi.fn((url: string, init: RequestInit) =>
+      url.startsWith(PRIMARY)
+        ? new Promise<Response>((resolve, reject) => {
+          const t = setTimeout(() => resolve(ok()), primaryMs);
+          init.signal!.addEventListener("abort", () => {
+            clearTimeout(t);
+            reject(init.signal!.reason);
+          });
+        })
+        : backup()
+    );
+  }
+
   test("requests the raw block from the primary only", async () => {
     const fetch = vi.fn(async () => ok());
     const out = await broker(fetch).retrieve!(CID_A);
@@ -68,12 +82,72 @@ describe("gatewayBlockBroker", () => {
   });
 
   test("rejects with every gateway failure when none answer", async () => {
-    const fetch = vi.fn(async () => {
+    const fetch = vi.fn(async (_url: string) => {
       throw new TypeError("network down");
     });
     const err = await broker(fetch).retrieve!(CID_A).catch((e) => e);
     expect(err).toBeInstanceOf(AggregateError);
-    expect((err as AggregateError).errors).toHaveLength(2);
+    expect((err as AggregateError).errors).toHaveLength(3);
+    expect(fetch.mock.calls.map((c) => new URL(c[0] as string).origin)).toEqual(
+      [PRIMARY, BACKUP, PRIMARY],
+    );
+  });
+
+  test("a lone gateway is retried, with a pause, before giving up", async () => {
+    vi.useFakeTimers();
+    try {
+      let calls = 0;
+      const fetch = vi.fn(async () =>
+        ++calls < 3 ? new Response(null, { status: 502 }) : ok()
+      );
+      const b = gatewayBlockBroker({
+        gateways: [{ url: PRIMARY, maxConcurrent: 8 }],
+        fetch,
+      });
+      const pending = b.retrieve!(CID_A);
+      await vi.advanceTimersByTimeAsync(0);
+      expect(fetch).toHaveBeenCalledTimes(1);
+      await vi.advanceTimersByTimeAsync(5000);
+      expect(await pending).toEqual(BLOCK);
+      expect(fetch).toHaveBeenCalledTimes(3);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  test("a lone gateway that keeps failing is given up on after three tries", async () => {
+    vi.useFakeTimers();
+    try {
+      const fetch = vi.fn(async () => new Response(null, { status: 502 }));
+      const b = gatewayBlockBroker({
+        gateways: [{ url: PRIMARY, maxConcurrent: 8 }],
+        fetch,
+      });
+      const pending = b.retrieve!(CID_A).catch((e) => e);
+      await vi.advanceTimersByTimeAsync(10_000);
+      expect(await pending).toBeInstanceOf(AggregateError);
+      expect(fetch).toHaveBeenCalledTimes(3);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  test("a slow lone gateway is not sent a duplicate request", async () => {
+    vi.useFakeTimers();
+    try {
+      const fetch = slowPrimary(9000, async () => ok());
+      const b = gatewayBlockBroker({
+        gateways: [{ url: PRIMARY, maxConcurrent: 8 }],
+        hedgeAfterMs: 1000,
+        fetch,
+      });
+      const pending = b.retrieve!(CID_A);
+      await vi.advanceTimersByTimeAsync(9000);
+      expect(await pending).toEqual(BLOCK);
+      expect(fetch).toHaveBeenCalledTimes(1);
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   test("rejects blocks larger than maxSize", async () => {
@@ -142,19 +216,6 @@ describe("gatewayBlockBroker", () => {
     expect(fetch).toHaveBeenCalledTimes(1);
   });
 
-  function slowPrimary(primaryMs: number, backup: () => Promise<Response>) {
-    return vi.fn((url: string, init: RequestInit) =>
-      url.startsWith(PRIMARY)
-        ? new Promise<Response>((resolve, reject) => {
-          const t = setTimeout(() => resolve(ok()), primaryMs);
-          init.signal!.addEventListener("abort", () => {
-            clearTimeout(t);
-            reject(init.signal!.reason);
-          });
-        })
-        : backup()
-    );
-  }
   const hedged = (
     fetch: (url: string, init: RequestInit) => Promise<Response>,
   ) =>

@@ -17,23 +17,14 @@ export interface GatewayHeliaOpts {
 const DEFAULT_NAMESPACE = "@cypsela/gateway-sw-core";
 
 /**
- * Primary first, backup second. Limits follow what each gateway was measured
- * to tolerate (2026-10-01):
- *
- * - trustless-gateway.link allows 100 concurrent HTTP/2 streams. Loading a
- *   1,200-block page took about as long at 32, 64 and 96 concurrent requests,
- *   but 95th-percentile latency was 0.6s at 32 against 1-8s above it.
- * - ipfs.filebase.io serves about 100 requests back to back, then refills at
- *   a little under 2 per second, and answers anything beyond that with 429.
+ * trustless-gateway.link allows 100 concurrent HTTP/2 streams. Loading a
+ * 1,200-block page took about as long at 32, 64 and 96 concurrent requests,
+ * but 95th-percentile latency was 0.6s at 32 against 1-8s above it
+ * (measured 2026-10-01).
  */
 export const DEFAULT_GATEWAYS: readonly GatewayConfig[] = [{
   url: "https://trustless-gateway.link",
   maxConcurrent: 32,
-}, {
-  url: "https://ipfs.filebase.io",
-  maxConcurrent: 16,
-  burst: 80,
-  perSecond: 1.5,
 }];
 
 export function deriveDbNames(
