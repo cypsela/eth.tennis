@@ -38,9 +38,7 @@ export function loadFixtureSite(siteName: string): Record<string, Uint8Array> {
 }
 
 const GATEWAY_HOST_PATTERN =
-  /^https:\/\/(?:trustless-gateway\.link|4everland\.io)\/ipfs\/([^/?]+)(?:\?format=raw)?$/;
-
-const ROUTING_HOST_PATTERN = /^https:\/\/delegated-ipfs\.dev\/routing\/v1\/.*/;
+  /^https:\/\/(?:trustless-gateway\.link|ipfs\.filebase\.io)\/ipfs\/([^/?]+)(?:\?format=raw)?$/;
 
 export async function installIpfsFixture(
   page: Page,
@@ -123,14 +121,6 @@ export async function installIpfsFixture(
       status: 200,
       contentType: "application/vnd.ipld.raw",
       body: Buffer.from(block),
-    });
-  });
-
-  await page.context().route(ROUTING_HOST_PATTERN, async (route: Route) => {
-    await route.fulfill({
-      status: 200,
-      contentType: "application/x-ndjson",
-      body: "",
     });
   });
 }

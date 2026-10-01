@@ -21,3 +21,40 @@ describe("createGatewayHelia (smoke)", () => {
     expect(typeof mod.createGatewayHelia).toBe("function");
   });
 });
+
+describe("gatewayRetrievalInit", () => {
+  test("defaults to trustless-gateway.link with filebase as backup", async () => {
+    const { DEFAULT_GATEWAYS } = await import("../src/helia.js");
+    expect(DEFAULT_GATEWAYS).toEqual([
+      "https://trustless-gateway.link",
+      "https://ipfs.filebase.io",
+    ]);
+  });
+
+  test("routes only through the gateways: no delegated routing", async () => {
+    const { gatewayRetrievalInit } = await import("../src/helia.js");
+    const init = gatewayRetrievalInit(["https://gw.example"]);
+    expect(init.routers?.map((r) => (r as { name?: string; }).name)).toEqual([
+      "http-gateway-router",
+      "gateway-ipns-router",
+    ]);
+    expect(init.blockBrokers).toHaveLength(1);
+    expect(init.libp2p).toEqual({ services: {} });
+  });
+
+  test("offers gateways as block providers in the configured order", async () => {
+    const { gatewayRetrievalInit } = await import("../src/helia.js");
+    const gateways = ["https://a.example", "https://b.example"];
+    const [router] = (gatewayRetrievalInit(gateways).routers ?? []) as Array<
+      Partial<import("@helia/interface").Routing>
+    >;
+    const hosts: string[] = [];
+    for await (const p of router!.findProviders!(null as never)) {
+      hosts.push(p.multiaddrs[0]!.toString());
+    }
+    expect(hosts).toEqual([
+      "/dns/a.example/tcp/443/tls/http",
+      "/dns/b.example/tcp/443/tls/http",
+    ]);
+  });
+});
