@@ -25,60 +25,65 @@ describe("createGatewayHelia (smoke)", () => {
 describe("gatewayRetrievalInit", () => {
   test("defaults to trustless-gateway.link with filebase as backup", async () => {
     const { DEFAULT_GATEWAYS } = await import("../src/helia.js");
-    expect(DEFAULT_GATEWAYS).toEqual([
+    expect(DEFAULT_GATEWAYS.map((g) => g.url)).toEqual([
       "https://trustless-gateway.link",
       "https://ipfs.filebase.io",
     ]);
   });
 
-  test("routes only through the gateways: no delegated routing", async () => {
+  test("default limits stay inside what each gateway tolerates", async () => {
+    const { DEFAULT_GATEWAYS } = await import("../src/helia.js");
+    const [primary, backup] = DEFAULT_GATEWAYS;
+    // 100 concurrent HTTP/2 streams
+    expect(primary!.maxConcurrent).toBeLessThan(100);
+    // about 100 back to back, then a little under 2 per second
+    expect(backup!.burst).toBeLessThan(100);
+    expect(backup!.perSecond).toBeLessThan(2);
+  });
+
+  test("retrieves only through the gateways: no delegated routing", async () => {
     const { gatewayRetrievalInit } = await import("../src/helia.js");
-    const init = gatewayRetrievalInit(["https://gw.example"]);
-    expect(init.routers?.map((r) => (r as { name?: string; }).name)).toEqual([
-      "fallback-router",
+    const init = gatewayRetrievalInit([{
+      url: "https://gw.example",
+      maxConcurrent: 4,
+    }]);
+    expect(init.blockBrokers.map((b) => (b as { name?: string; }).name))
+      .toEqual(["gateway-block-broker"]);
+    expect(init.routers.map((r) => (r as { name?: string; }).name)).toEqual([
       "gateway-ipns-router",
     ]);
-    expect(init.blockBrokers).toHaveLength(1);
   });
 
-  test("offers gateways as block providers in the configured order", async () => {
-    const { gatewayRetrievalInit } = await import("../src/helia.js");
-    const gateways = ["https://a.example", "https://b.example"];
-    const [router] = gatewayRetrievalInit(gateways).routers as Array<
-      import("@helia/interface").Router
-    >;
-    const hosts: string[] = [];
-    for await (const p of router!.findProviders!(null as never)) {
-      hosts.push(p.multiaddrs[0]!.toString());
-    }
-    expect(hosts).toEqual([
-      "/dns/a.example/tcp/443/tls/http",
-      "/dns/b.example/tcp/443/tls/http",
-    ]);
-  });
-
-  test("a node built from the config finds the gateways as providers", async () => {
+  test("a node built from the config fetches blocks from the gateway", async () => {
     const { createHeliaLight } = await import("helia");
     const { CID } = await import("multiformats/cid");
     const { gatewayRetrievalInit } = await import("../src/helia.js");
+    // sha2-256 of zero bytes: a block we can serve and have verified
+    const cid = CID.parse(
+      "bafkreihdwdcefgh4dqkjv67uzcmw7ojee6xedzdetojuzjevtenxquvyku",
+    );
+    const requested: string[] = [];
+    const realFetch = globalThis.fetch;
+    globalThis.fetch = (async (url: string) => {
+      requested.push(url);
+      return new Response(new Uint8Array(0), { status: 200 });
+    }) as typeof fetch;
     const helia = await createHeliaLight(
-      gatewayRetrievalInit(["https://a.example", "https://b.example"]),
+      gatewayRetrievalInit([{ url: "https://gw.example", maxConcurrent: 4 }]),
     )
       .start();
     try {
-      const found: string[] = [];
-      for await (
-        const p of helia.routing.findProviders(CID.parse("bafkqaaa"), {
-          signal: AbortSignal.timeout(2000),
-        })
-      ) {
-        found.push(p.multiaddrs[0]!.toString());
+      const got = await helia.blockstore.get(cid, {
+        signal: AbortSignal.timeout(2000),
+      }) as Uint8Array | AsyncIterable<Uint8Array>;
+      if (!(got instanceof Uint8Array)) {
+        for await (const _ of got) {
+          /* drain */
+        }
       }
-      expect(found).toEqual([
-        "/dns/a.example/tcp/443/tls/http",
-        "/dns/b.example/tcp/443/tls/http",
-      ]);
+      expect(requested).toEqual([`https://gw.example/ipfs/${cid}?format=raw`]);
     } finally {
+      globalThis.fetch = realFetch;
       await helia.stop();
     }
   });

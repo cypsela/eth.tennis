@@ -1,24 +1,40 @@
-import { fallbackRouter } from "@helia/fallback-router";
-import type { Helia, Router } from "@helia/interface";
-import { trustlessGatewayBlockBroker } from "@helia/trustless-gateway-client";
+import type { Helia } from "@helia/interface";
 import { IDBBlockstore } from "blockstore-idb";
 import { IDBDatastore } from "datastore-idb";
 import { createHeliaLight, type HeliaInit } from "helia";
+import {
+  gatewayBlockBroker,
+  type GatewayConfig,
+} from "./retrieval/gateway-block-broker.js";
 import { gatewayIpnsRouting } from "./routers/gateway-ipns.js";
 
 export interface GatewayHeliaOpts {
   namespace?: string;
-  /** Trustless gateway origins, tried in order. */
-  gateways?: readonly string[];
+  /** Trustless gateways in preference order: the first is the primary. */
+  gateways?: readonly GatewayConfig[];
 }
 
 const DEFAULT_NAMESPACE = "@cypsela/gateway-sw-core";
 
-/** Primary first, backup second. */
-export const DEFAULT_GATEWAYS: readonly string[] = [
-  "https://trustless-gateway.link",
-  "https://ipfs.filebase.io",
-];
+/**
+ * Primary first, backup second. Limits follow what each gateway was measured
+ * to tolerate (2026-10-01):
+ *
+ * - trustless-gateway.link allows 100 concurrent HTTP/2 streams. Loading a
+ *   1,200-block page took about as long at 32, 64 and 96 concurrent requests,
+ *   but 95th-percentile latency was 0.6s at 32 against 1-8s above it.
+ * - ipfs.filebase.io serves about 100 requests back to back, then refills at
+ *   a little under 2 per second, and answers anything beyond that with 429.
+ */
+export const DEFAULT_GATEWAYS: readonly GatewayConfig[] = [{
+  url: "https://trustless-gateway.link",
+  maxConcurrent: 32,
+}, {
+  url: "https://ipfs.filebase.io",
+  maxConcurrent: 16,
+  burst: 80,
+  perSecond: 1.5,
+}];
 
 export function deriveDbNames(
   opts: Pick<GatewayHeliaOpts, "namespace"> = {},
@@ -28,33 +44,15 @@ export function deriveDbNames(
 }
 
 /**
- * Offers the gateways as providers for every CID, in the configured order.
- *
- * Wraps `fallbackRouter` without its "fallback" capability: helia 7.1 waits
- * forever in findProviders when every router is a fallback router, so the
- * gateways have to look like a default router.
- */
-function gatewayProviderRouting(gateways: readonly string[]): Router {
-  const inner = fallbackRouter({ gateways: [...gateways], shuffle: false });
-  return {
-    name: inner.name,
-    findProviders: (cid, options) => inner.findProviders!(cid, options),
-  };
-}
-
-/**
  * Retrieval config: blocks and IPNS records both come from the configured
  * trustless gateways. No delegated routing, no libp2p.
  */
 export function gatewayRetrievalInit(
-  gateways: readonly string[] = DEFAULT_GATEWAYS,
+  gateways: readonly GatewayConfig[] = DEFAULT_GATEWAYS,
 ): Required<Pick<HeliaInit, "blockBrokers" | "routers">> {
   return {
-    blockBrokers: [trustlessGatewayBlockBroker()],
-    routers: [
-      gatewayProviderRouting(gateways),
-      gatewayIpnsRouting({ gateways }),
-    ],
+    blockBrokers: [gatewayBlockBroker({ gateways })],
+    routers: [gatewayIpnsRouting({ gateways: gateways.map((g) => g.url) })],
   };
 }
 

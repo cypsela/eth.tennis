@@ -31,10 +31,8 @@
   "dependencies": {
     "@ensdomains/ensjs": "^4.2.0",
     "@helia/dnslink": "^2.0.2",
-    "@helia/fallback-router": "^1.1.2",
     "@helia/interface": "^7.1.2",
     "@helia/ipns": "^10.2.2",
-    "@helia/trustless-gateway-client": "^1.0.7",
     "@helia/verified-fetch": "^8.1.2",
     "blockstore-idb": "^4.0.1",
     "datastore-idb": "^5.0.1",

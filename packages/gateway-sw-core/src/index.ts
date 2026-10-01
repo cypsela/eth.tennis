@@ -8,5 +8,7 @@ export * from "./helia.js";
 export * from "./log.js";
 export * from "./mount-store.js";
 export * from "./resolvers/index.js";
+export * from "./retrieval/gateway-block-broker.js";
+export * from "./retrieval/limiter.js";
 export * from "./routers/gateway-ipns.js";
 export * from "./types.js";

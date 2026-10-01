@@ -106,18 +106,12 @@ importers:
       '@helia/dnslink':
         specifier: ^2.0.2
         version: 2.0.2
-      '@helia/fallback-router':
-        specifier: ^1.1.2
-        version: 1.1.2
       '@helia/interface':
         specifier: ^7.1.2
         version: 7.1.2
       '@helia/ipns':
         specifier: ^10.2.2
         version: 10.2.2
-      '@helia/trustless-gateway-client':
-        specifier: ^1.0.7
-        version: 1.0.7
       '@helia/verified-fetch':
         specifier: ^8.1.2
         version: 8.1.2(react-native@0.85.1(@babel/core@7.29.0(supports-color@10.2.2))(react@19.2.5)(supports-color@10.2.2))(supports-color@10.2.2)
