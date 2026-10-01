@@ -32,6 +32,9 @@ importers:
       '@helia/interface':
         specifier: ^7.1.2
         version: 7.1.2
+      '@helia/utils':
+        specifier: ^3.0.6
+        version: 3.0.6
       multiformats:
         specifier: ^14.0.5
         version: 14.0.5

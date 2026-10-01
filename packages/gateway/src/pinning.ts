@@ -1,4 +1,5 @@
 import type { Helia } from "@helia/interface";
+import { breadthFirstWalker } from "@helia/utils";
 import type { CID } from "multiformats/cid";
 
 export interface PinHooks {
@@ -12,15 +13,20 @@ export async function fetchRootThenDrain(
   cid: CID,
   hooks?: PinHooks,
 ): Promise<void> {
-  const addOpts = hooks?.onProgress
-    ? {
-      onProgress: (evt: unknown) =>
-        hooks.onProgress!(evt as { type: string; detail: unknown; }),
-    }
-    : undefined;
+  // Breadth-first so the directory structure and the first block of every
+  // file are cached before any one file's deep blocks.
+  const addOpts = {
+    walker: breadthFirstWalker(),
+    ...(hooks?.onProgress
+      ? {
+        onProgress: (evt: unknown) =>
+          hooks.onProgress!(evt as { type: string; detail: unknown; }),
+      }
+      : {}),
+  };
   let iter: AsyncGenerator<CID>;
   try {
-    iter = addOpts ? helia.pins.add(cid, addOpts) : helia.pins.add(cid);
+    iter = helia.pins.add(cid, addOpts);
     await iter.next();
   } catch (err) {
     if (err instanceof Error && err.name === "AlreadyPinnedError") {

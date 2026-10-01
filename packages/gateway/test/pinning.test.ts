@@ -37,9 +37,16 @@ describe("fetchRootThenDrain", () => {
     const helia = { pins: { add: vi.fn(() => iter) } } as any;
     const onSuccess = vi.fn();
     await fetchRootThenDrain(helia, SAMPLE_CID, { onSuccess });
-    expect(helia.pins.add).toHaveBeenCalledWith(SAMPLE_CID);
+    expect(helia.pins.add).toHaveBeenCalledWith(SAMPLE_CID, expect.anything());
     await new Promise((r) => setTimeout(r, 0));
     expect(onSuccess).toHaveBeenCalledTimes(1);
+  });
+
+  test("walks the DAG breadth-first so shallow blocks are cached first", async () => {
+    const helia = { pins: { add: vi.fn(() => fakeIter(1)) } } as any;
+    await fetchRootThenDrain(helia, SAMPLE_CID);
+    const opts = helia.pins.add.mock.calls[0][1];
+    expect(opts.walker({}).constructor.name).toBe("BreadthFirstGraphWalker");
   });
 
   test("AlreadyPinnedError at root triggers onSuccess immediately", async () => {

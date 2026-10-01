@@ -19,6 +19,7 @@
     "@cypsela/gateway-content-sw": "workspace:*",
     "@cypsela/gateway-sw-core": "workspace:*",
     "@helia/interface": "^7.1.2",
+    "@helia/utils": "^3.0.6",
     "multiformats": "^14.0.5"
   },
   "devDependencies": {
