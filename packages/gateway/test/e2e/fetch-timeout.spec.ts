@@ -2,7 +2,7 @@ import { expect, test } from "./setup.ts";
 
 const SLOW_CID = "bafybeidzx4bdinhpdc62rppw4aoqwshigmkcrvfemhyxuqpotigcyzflsu";
 
-// FETCH_BUDGET.fetchTimeoutMs is 8000ms. 12000ms exceeds it on every block,
+// FETCH_BUDGET.fetchTimeoutMs is 10000ms. 12000ms exceeds it on every block,
 // so the gateway's per-fetch path always times out when fetching a fresh
 // block.
 const SLOW_BLOCK_DELAY_MS = 12_000;

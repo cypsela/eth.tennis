@@ -55,7 +55,7 @@ const BYPASS_PREFIXES = __BYPASS_PREFIXES__;
 const PRECACHE = ["/", ...SHELL_ASSETS];
 const BYPASS_PATHS = new Set<string>(SHELL_ASSETS);
 
-const FETCH_BUDGET = { resolveStepMs: 4_000, fetchTimeoutMs: 8_000 } as const;
+const FETCH_BUDGET = { resolveStepMs: 5_000, fetchTimeoutMs: 10_000 } as const;
 
 function isShellAsset(pathname: string): boolean {
   if (BYPASS_PATHS.has(pathname)) return true;
@@ -205,7 +205,7 @@ sw.addEventListener("message", (event) => {
         });
       const fresh = await resolveReference(start, bootstrapHandlers, {
         onHop,
-        resolveStepMs: 4_000,
+        resolveStepMs: FETCH_BUDGET.resolveStepMs,
       });
       source?.postMessage({
         type: "log",
