@@ -1,4 +1,4 @@
-import type { Routing, RoutingOptions } from "@helia/interface";
+import type { Router, RoutingOptions } from "@helia/interface";
 import { base36 } from "multiformats/bases/base36";
 import { CID } from "multiformats/cid";
 import * as Digest from "multiformats/hashes/digest";
@@ -13,9 +13,7 @@ export interface GatewayIpnsRoutingInit {
   fetch?: (url: string, init: RequestInit) => Promise<Response>;
 }
 
-export interface GatewayIpnsRouter extends Pick<Routing, "get"> {
-  name: string;
-}
+export type GatewayIpnsRouter = Router & Required<Pick<Router, "get">>;
 
 function ipnsNameFromRoutingKey(key: Uint8Array): string {
   const hasPrefix = key.length > IPNS_PREFIX.length
@@ -38,7 +36,10 @@ export function gatewayIpnsRouting(
   const doFetch = init.fetch ?? ((url, opts) => globalThis.fetch(url, opts));
   return {
     name: "gateway-ipns-router",
-    async get(key: Uint8Array, options?: RoutingOptions): Promise<Uint8Array> {
+    async get(
+      key: Uint8Array,
+      options?: RoutingOptions,
+    ): Promise<Uint8Array<ArrayBuffer>> {
       const name = ipnsNameFromRoutingKey(key);
       const errors: unknown[] = [];
       for (const gateway of init.gateways) {

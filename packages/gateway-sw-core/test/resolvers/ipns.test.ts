@@ -9,6 +9,9 @@ import { createIpnsResolverFromImpl } from "../../src/resolvers/ipns.js";
 const IPNS_KEY =
   "k51qzi5uqu5dktsyfv7xz8h631pri4ct7osmb43nibxiojpttxzoft6hdyyzg4";
 
+const RESOLVED_CID =
+  "bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi";
+
 describe("ipns resolver", () => {
   test("protocol is 'ipns'", () => {
     const r = createIpnsResolverFromImpl({ resolve: vi.fn() } as any);
@@ -17,10 +20,9 @@ describe("ipns resolver", () => {
 
   test("resolves to a ContentReference with the resolved CID", async () => {
     const resolver = {
-      resolve: vi.fn(async () => ({
-        cid: { toString: () => "bafyResolved" },
-        path: "",
-      })),
+      resolve: vi.fn(async function*() {
+        yield { value: `/ipfs/${RESOLVED_CID}`, record: {} };
+      }),
     } as any;
     const r = createIpnsResolverFromImpl(resolver);
     const out = await r.resolve({
@@ -31,13 +33,43 @@ describe("ipns resolver", () => {
     expect(out).toEqual({
       kind: "content",
       protocol: "ipfs",
-      value: "bafyResolved",
+      value: RESOLVED_CID,
     });
+  });
+
+  test("recursive records resolve to the final hop, dropping any path", async () => {
+    const resolver = {
+      resolve: vi.fn(async function*() {
+        yield { value: "/ipns/k51other", record: {} };
+        yield { value: `/ipfs/${RESOLVED_CID}/docs`, record: {} };
+      }),
+    } as any;
+    const r = createIpnsResolverFromImpl(resolver);
+    const out = await r.resolve({
+      kind: "address",
+      protocol: "ipns",
+      value: IPNS_KEY,
+    });
+    expect(out.value).toBe(RESOLVED_CID);
+  });
+
+  test("a record that does not point at /ipfs/ is IpnsResolveFailed", async () => {
+    const resolver = {
+      resolve: vi.fn(async function*() {
+        yield { value: "/dnslink/example.com", record: {} };
+      }),
+    } as any;
+    const r = createIpnsResolverFromImpl(resolver);
+    await expect(
+      r.resolve({ kind: "address", protocol: "ipns", value: IPNS_KEY }),
+    )
+      .rejects
+      .toBeInstanceOf(IpnsResolveFailed);
   });
 
   test("RecordNotFoundError → IpnsRecordNotFound", async () => {
     const resolver = {
-      resolve: vi.fn(async () => {
+      resolve: vi.fn(async function*() {
         const err = new Error("not found");
         err.name = "RecordNotFoundError";
         throw err;
@@ -53,7 +85,7 @@ describe("ipns resolver", () => {
 
   test("RecordsFailedValidationError → IpnsRecordUnverifiable", async () => {
     const resolver = {
-      resolve: vi.fn(async () => {
+      resolve: vi.fn(async function*() {
         const err = new Error("bad sig");
         err.name = "RecordsFailedValidationError";
         throw err;
@@ -69,7 +101,7 @@ describe("ipns resolver", () => {
 
   test("unknown errors are wrapped in IpnsResolveFailed", async () => {
     const resolver = {
-      resolve: vi.fn(async () => {
+      resolve: vi.fn(async function*() {
         throw new Error("something else");
       }),
     } as any;
@@ -84,7 +116,7 @@ describe("ipns resolver", () => {
   test("IpnsResolveFailed wrap preserves the original cause message", async () => {
     const original = new Error("offline");
     const resolver = {
-      resolve: vi.fn(async () => {
+      resolve: vi.fn(async function*() {
         throw original;
       }),
     } as any;

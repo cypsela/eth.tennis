@@ -1,3 +1,4 @@
+import { CID } from "multiformats/cid";
 import { describe, expect, test, vi } from "vitest";
 import {
   DnslinkRecordNotFound,
@@ -6,6 +7,8 @@ import {
 import { createDnslinkResolverFromImpl } from "../../src/resolvers/dnslink.js";
 
 const DOMAIN = "app.uniswap.org";
+const IPNS_NAME =
+  "k51qzi5uqu5dktsyfv7xz8h631pri4ct7osmb43nibxiojpttxzoft6hdyyzg4";
 
 function impl(resolveFn: (...args: any[]) => any) {
   return { resolve: vi.fn(resolveFn) } as any;
@@ -42,7 +45,7 @@ describe("dnslink resolver", () => {
     const r = createDnslinkResolverFromImpl(
       impl(async () => [{
         namespace: "ipns",
-        peerId: { toString: () => "k51Other" },
+        value: CID.parse(IPNS_NAME).multihash,
         path: "",
         answer: {} as any,
       }]),
@@ -55,7 +58,7 @@ describe("dnslink resolver", () => {
     expect(out).toEqual({
       kind: "address",
       protocol: "ipns",
-      value: "k51Other",
+      value: IPNS_NAME,
     });
   });
 
@@ -63,7 +66,7 @@ describe("dnslink resolver", () => {
     const r = createDnslinkResolverFromImpl(
       impl(async () => [{
         namespace: "ipns",
-        peerId: { toString: () => "k51" },
+        value: CID.parse(IPNS_NAME).multihash,
         path: "",
         answer: {} as any,
       }, {
@@ -169,5 +172,41 @@ describe("dnslink resolver", () => {
       signal: ctrl.signal,
     });
     expect(fn).toHaveBeenCalledWith(DOMAIN, { signal: ctrl.signal });
+  });
+
+  function dnsQueryFailed(...inner: Error[]): Error {
+    const err = new AggregateError(inner, "DNS lookup failed");
+    err.name = "DNSQueryFailedError";
+    return err;
+  }
+  function named(name: string): Error {
+    const err = new Error(name);
+    err.name = name;
+    return err;
+  }
+
+  test("every DNS resolver answering empty → DnslinkRecordNotFound", async () => {
+    const r = createDnslinkResolverFromImpl(impl(async () => {
+      throw dnsQueryFailed(
+        named("EmptyDNSAnswerError"),
+        named("EmptyDNSAnswerError"),
+      );
+    }));
+    await expect(
+      r.resolve({ kind: "address", protocol: "dnslink", value: DOMAIN }),
+    )
+      .rejects
+      .toBeInstanceOf(DnslinkRecordNotFound);
+  });
+
+  test("a DNS resolver failing outright → DnslinkResolveFailed", async () => {
+    const r = createDnslinkResolverFromImpl(impl(async () => {
+      throw dnsQueryFailed(named("EmptyDNSAnswerError"), named("TypeError"));
+    }));
+    await expect(
+      r.resolve({ kind: "address", protocol: "dnslink", value: DOMAIN }),
+    )
+      .rejects
+      .toBeInstanceOf(DnslinkResolveFailed);
   });
 });

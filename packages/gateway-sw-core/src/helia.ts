@@ -1,9 +1,9 @@
-import { trustlessGateway } from "@helia/block-brokers";
-import { createHeliaHTTP, type HeliaHTTPInit } from "@helia/http";
-import type { Helia } from "@helia/interface";
-import { httpGatewayRouting } from "@helia/routers";
+import { fallbackRouter } from "@helia/fallback-router";
+import type { Helia, Router } from "@helia/interface";
+import { trustlessGatewayBlockBroker } from "@helia/trustless-gateway-client";
 import { IDBBlockstore } from "blockstore-idb";
 import { IDBDatastore } from "datastore-idb";
+import { createHeliaLight, type HeliaInit } from "helia";
 import { gatewayIpnsRouting } from "./routers/gateway-ipns.js";
 
 export interface GatewayHeliaOpts {
@@ -28,21 +28,33 @@ export function deriveDbNames(
 }
 
 /**
+ * Offers the gateways as providers for every CID, in the configured order.
+ *
+ * Wraps `fallbackRouter` without its "fallback" capability: helia 7.1 waits
+ * forever in findProviders when every router is a fallback router, so the
+ * gateways have to look like a default router.
+ */
+function gatewayProviderRouting(gateways: readonly string[]): Router {
+  const inner = fallbackRouter({ gateways: [...gateways], shuffle: false });
+  return {
+    name: inner.name,
+    findProviders: (cid, options) => inner.findProviders!(cid, options),
+  };
+}
+
+/**
  * Retrieval config: blocks and IPNS records both come from the configured
- * trustless gateways. No delegated routing, no DHT.
+ * trustless gateways. No delegated routing, no libp2p.
  */
 export function gatewayRetrievalInit(
   gateways: readonly string[] = DEFAULT_GATEWAYS,
-): Pick<HeliaHTTPInit, "blockBrokers" | "routers" | "libp2p"> {
+): Required<Pick<HeliaInit, "blockBrokers" | "routers">> {
   return {
-    blockBrokers: [trustlessGateway()],
+    blockBrokers: [trustlessGatewayBlockBroker()],
     routers: [
-      httpGatewayRouting({ gateways: [...gateways], shuffle: false }),
+      gatewayProviderRouting(gateways),
       gatewayIpnsRouting({ gateways }),
     ],
-    // Replaces @helia/http's default services, which include a delegated
-    // routing client.
-    libp2p: { services: {} },
   };
 }
 
@@ -56,9 +68,10 @@ export async function createGatewayHelia(
   // Startable.start()/stop(), which these don't implement.
   await blockstore.open();
   await datastore.open();
-  return createHeliaHTTP({
+  return createHeliaLight({
     blockstore,
     datastore,
     ...gatewayRetrievalInit(opts.gateways),
-  });
+  })
+    .start();
 }

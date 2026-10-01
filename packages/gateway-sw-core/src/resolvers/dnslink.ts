@@ -1,7 +1,27 @@
 import { type DNSLink, dnsLink, type DNSLinkComponents } from "@helia/dnslink";
+import { base36 } from "multiformats/bases/base36";
+import { CID } from "multiformats/cid";
 
 import { DnslinkRecordNotFound, DnslinkResolveFailed } from "../errors.js";
 import type { AddressReference, Reference, Resolver } from "../types.js";
+
+const LIBP2P_KEY_CODEC = 0x72;
+
+/**
+ * A missing record surfaces either as DNSLinkNotFoundError or, when every DNS
+ * resolver answered with no records (NXDOMAIN included), as a
+ * DNSQueryFailedError made up solely of EmptyDNSAnswerErrors.
+ */
+function isRecordNotFound(cause: unknown): boolean {
+  if (!(cause instanceof Error)) return false;
+  if (cause.name === "DNSLinkNotFoundError") return true;
+  return cause.name === "DNSQueryFailedError"
+    && cause instanceof AggregateError
+    && cause.errors.length > 0
+    && cause.errors.every((e) =>
+      e instanceof Error && e.name === "EmptyDNSAnswerError"
+    );
+}
 
 export function createDnslinkResolver(
   components: DNSLinkComponents,
@@ -25,7 +45,7 @@ export function createDnslinkResolverFromImpl(
           ? await impl.resolve(domain, { signal: opts.signal })
           : await impl.resolve(domain);
       } catch (cause) {
-        if (cause instanceof Error && cause.name === "DNSLinkNotFoundError") {
+        if (isRecordNotFound(cause)) {
           throw new DnslinkRecordNotFound(domain, domain, cause);
         }
         throw new DnslinkResolveFailed(domain, domain, cause);
@@ -51,7 +71,9 @@ export function createDnslinkResolverFromImpl(
           return {
             kind: "address",
             protocol: "ipns",
-            value: first.peerId.toString(),
+            value: CID
+              .createV1(LIBP2P_KEY_CODEC, first.value)
+              .toString(base36),
           };
         default:
           throw new DnslinkResolveFailed(

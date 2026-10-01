@@ -18,17 +18,17 @@
   "dependencies": {
     "@cypsela/gateway-content-sw": "workspace:*",
     "@cypsela/gateway-sw-core": "workspace:*",
-    "@helia/interface": "^6.2.1",
-    "multiformats": "^13.4.2"
+    "@helia/interface": "^7.1.2",
+    "multiformats": "^14.0.5"
   },
   "devDependencies": {
     "@ensdomains/content-hash": "3.1.0-rc.1",
-    "@helia/unixfs": "^7.2.1",
+    "@helia/unixfs": "^8.0.9",
     "@playwright/test": "^1.59.1",
-    "blockstore-core": "^6.1.3",
-    "datastore-core": "^11.0.4",
+    "blockstore-core": "^7.0.1",
+    "datastore-core": "^12.0.1",
     "esbuild": "^0.27.7",
-    "helia": "^6.1.3",
+    "helia": "^7.1.16",
     "jsdom": "^29.0.2",
     "typescript": "^6.0.3",
     "viem": "2.43.1",

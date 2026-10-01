@@ -32,13 +32,23 @@ export function createIpnsResolverFromImpl(
     ): Promise<ContentReference<"ipfs">> {
       try {
         const key = CID.parse(ref.value) as ResolverKey;
-        const resolved = opts?.signal
-          ? await impl.resolve(key, { signal: opts.signal })
-          : await impl.resolve(key);
+        // Recursive records yield one result per hop; the last is the target.
+        let target: string | undefined;
+        for await (
+          const { value } of opts?.signal
+            ? impl.resolve(key, { signal: opts.signal })
+            : impl.resolve(key)
+        ) {
+          target = value;
+        }
+        const cid = target?.match(/^\/ipfs\/([^/]+)/)?.[1];
+        if (cid == null) {
+          throw new Error(`record does not point at /ipfs/: ${target}`);
+        }
         return {
           kind: "content",
           protocol: "ipfs",
-          value: resolved.cid.toString(),
+          value: CID.parse(cid).toString(),
         };
       } catch (cause) {
         if (cause instanceof Error && cause.name === "RecordNotFoundError") {
