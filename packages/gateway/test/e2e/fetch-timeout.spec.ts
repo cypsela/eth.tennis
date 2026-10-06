@@ -2,10 +2,10 @@ import { expect, test } from "./setup.ts";
 
 const SLOW_CID = "bafybeidzx4bdinhpdc62rppw4aoqwshigmkcrvfemhyxuqpotigcyzflsu";
 
-// FETCH_BUDGET.fetchTimeoutMs is 30000ms. 35000ms exceeds it on every block,
+// FETCH_BUDGET.fetchTimeoutMs is 120000ms. 125000ms exceeds it on every block,
 // so the gateway's per-fetch path always times out when fetching a fresh
 // block.
-const SLOW_BLOCK_DELAY_MS = 35_000;
+const SLOW_BLOCK_DELAY_MS = 125_000;
 
 test.describe("sub-resource fetch errors surface via x-gateway-error-class", () => {
   test.use({
@@ -19,7 +19,7 @@ test.describe("sub-resource fetch errors surface via x-gateway-error-class", () 
   });
 
   test("verified-fetch timeout becomes 504 fetch-timeout with errorClass header, not raw 500", async ({ page }) => {
-    test.setTimeout(150_000);
+    test.setTimeout(420_000);
 
     const gatewayResponses: Array<
       { url: string; status: number; errorClass: string | null; }
@@ -38,9 +38,9 @@ test.describe("sub-resource fetch errors surface via x-gateway-error-class", () 
       });
     });
 
-    // Bootstrap waits for the root block (~35s), then triggers a reload.
+    // Bootstrap waits for the root block (~125s), then triggers a reload.
     // The reload's navigation fetches the index.html block fresh — the SW's
-    // 30s fetch budget fires first, so the navigation returns the gateway's
+    // 120s fetch budget fires first, so the navigation returns the gateway's
     // error response. We assert the response shape.
     await page.goto("http://vitalik.eth.tennis.localhost:5173/");
 
@@ -48,7 +48,7 @@ test.describe("sub-resource fetch errors surface via x-gateway-error-class", () 
     // header set (i.e., the bug path fired).
     await expect
       .poll(() => gatewayResponses.find((r) => r.errorClass != null) ?? null, {
-        timeout: 120_000,
+        timeout: 360_000,
         intervals: [500, 1000, 2000],
       })
       .not
