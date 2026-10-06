@@ -18,7 +18,7 @@ const MIN_ATTEMPTS = 3;
 const RETRY_PAUSE_MS = 500;
 
 export interface GatewayConfig extends GatewayLimits {
-  /** Trustless gateway origin, e.g. `https://trustless-gateway.link`. */
+  /** Trustless gateway origin, e.g. `https://ipfs.filebase.io`. */
   url: string;
 }
 

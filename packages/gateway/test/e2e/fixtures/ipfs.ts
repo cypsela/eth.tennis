@@ -38,7 +38,7 @@ export function loadFixtureSite(siteName: string): Record<string, Uint8Array> {
 }
 
 const GATEWAY_HOST_PATTERN =
-  /^https:\/\/trustless-gateway\.link\/ipfs\/([^/?]+)(?:\?format=raw)?$/;
+  /^https:\/\/ipfs\.filebase\.io\/ipfs\/([^/?]+)(?:\?format=raw)?$/;
 
 export async function installIpfsFixture(
   page: Page,

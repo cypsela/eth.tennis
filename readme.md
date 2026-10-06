@@ -31,7 +31,7 @@ mapping. User-configurable RPC and light-client mode are post-v1 work.
 3. SW uses `@ensdomains/ensjs` to look up the contenthash, then
    `@helia/verified-fetch` to retrieve and verify the content. Blocks and
    IPNS records are requested from a trustless gateway
-   (`trustless-gateway.link`); the gateway is untrusted, since every block
+   (`ipfs.filebase.io`); the gateway is untrusted, since every block
    and record is verified in the browser.
 4. Bootstrap triggers a reload; the SW now controls the origin and serves
    content and sub-resources from its primed cache.
