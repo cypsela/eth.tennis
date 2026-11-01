@@ -5,9 +5,9 @@ describe("progressEventToLine", () => {
   test("maps a trustless-gateway block fetch to a gateway host line", () => {
     const line = progressEventToLine(
       "trustless-gateway:get-block:fetch",
-      new URL("https://ipfs.filebase.io/ipfs/bafyfoo?format=raw"),
+      new URL("https://provider.test/ipfs/bafyfoo?format=raw"),
     );
-    expect(line).toBe("fetching from ipfs.filebase.io");
+    expect(line).toBe("fetching from provider.test");
   });
 
   test("accepts a string url in detail", () => {
