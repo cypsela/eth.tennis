@@ -157,3 +157,25 @@ test.describe("dnslink-record-not-found when DoH returns NXDOMAIN", () => {
       .toBeVisible({ timeout: 10_000 });
   });
 });
+
+test.describe("bootstrap keeps retrying when the router returns no providers", () => {
+  test.use({
+    rpc: {
+      "noprov.eth": {
+        protocol: "ipfs",
+        cid: "bafybeidzx4bdinhpdc62rppw4aoqwshigmkcrvfemhyxuqpotigcyzflsu",
+      },
+    },
+    ipfs: {},
+  });
+
+  // The bootstrap pin has no time budget of its own, so an unprovided root
+  // CID neither renders nor surfaces an error class; it stays on "fetching".
+  test("a CID with no providers stays on the fetching line without an error", async ({ page }) => {
+    await page.goto("http://noprov.eth.tennis.localhost:5173/");
+    await expect(page.locator(".line").filter({ hasText: "fetching ipfs://" }))
+      .toBeVisible({ timeout: 30_000 });
+    await page.waitForTimeout(15_000);
+    await expect(page.locator(".line.level-error")).toHaveCount(0);
+  });
+});

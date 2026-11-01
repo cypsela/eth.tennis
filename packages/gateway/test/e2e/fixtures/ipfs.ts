@@ -37,8 +37,17 @@ export function loadFixtureSite(siteName: string): Record<string, Uint8Array> {
   return out;
 }
 
-const GATEWAY_HOST_PATTERN =
-  /^https:\/\/ipfs\.filebase\.io\/ipfs\/([^/?]+)(?:\?format=raw)?$/;
+const ROUTER_PROVIDERS_PATTERN =
+  /^https:\/\/router\.test\/routing\/v1\/providers\/([^/?]+)(?:\?.*)?$/;
+const ROUTER_PATTERN = /^https:\/\/router\.test\/routing\/v1\/.*$/;
+const PROVIDER_PATTERN = /^https:\/\/provider\.test\/ipfs\/([^/?]+)(?:\?.*)?$/;
+
+const PROVIDER_RECORD = {
+  Schema: "peer",
+  ID: "12D3KooWDect8DhuEGwWRm3WmbwYE1dkEYsQw7JQAqobmoLWk4fr",
+  Addrs: ["/dns4/provider.test/tcp/443/https"],
+  Protocols: ["transport-ipfs-gateway-http"],
+};
 
 export async function installIpfsFixture(
   page: Page,
@@ -95,20 +104,41 @@ export async function installIpfsFixture(
     }
   }
 
-  await page.context().route(GATEWAY_HOST_PATTERN, async (route: Route) => {
-    const url = route.request().url();
-    const match = GATEWAY_HOST_PATTERN.exec(url);
-    const cidStr = match?.[1];
-    if (!cidStr) return route.fulfill({ status: 404 });
-    let parsed: CID;
+  const keyOf = (cidStr: string): string | undefined => {
     try {
-      parsed = CID.parse(cidStr);
+      return base32.encode(CID.parse(cidStr).multihash.bytes);
     } catch {
-      return route.fulfill({ status: 404 });
+      return undefined;
     }
-    const key = base32.encode(parsed.multihash.bytes);
-    const block = blocks.get(key);
-    if (!block) return route.fulfill({ status: 404 });
+  };
+
+  await page.context().route(ROUTER_PATTERN, async (route: Route) => {
+    const url = route.request().url();
+    const providers = ROUTER_PROVIDERS_PATTERN.exec(url);
+    if (providers) {
+      const key = keyOf(providers[1]);
+      const held = key != null && blocks.has(key);
+      return route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({ Providers: held ? [PROVIDER_RECORD] : [] }),
+      });
+    }
+    if (url.includes("/routing/v1/peers/")) {
+      return route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({ Peers: [] }),
+      });
+    }
+    return route.fulfill({ status: 404 });
+  });
+
+  await page.context().route(PROVIDER_PATTERN, async (route: Route) => {
+    const cidStr = PROVIDER_PATTERN.exec(route.request().url())?.[1];
+    const key = cidStr ? keyOf(cidStr) : undefined;
+    const block = key != null ? blocks.get(key) : undefined;
+    if (key == null || !block) return route.fulfill({ status: 404 });
     const delay = delays.get(key);
     if (delay === "infinity") {
       await new Promise(() => {});
