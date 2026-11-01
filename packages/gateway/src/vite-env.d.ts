@@ -3,6 +3,7 @@
 interface ImportMetaEnv {
   readonly VITE_GATEWAY_DOMAIN?: string;
   readonly VITE_RPC_URLS?: string;
+  readonly VITE_DELEGATED_ROUTER_URLS?: string;
   readonly VITE_TEST_CONTENT_GATEWAY?: string;
 }
 

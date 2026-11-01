@@ -50,6 +50,15 @@ if (RPC_URLS.length === 0) {
     "VITE_RPC_URLS must be set to a non-empty comma-separated list",
   );
 }
+const DELEGATED_ROUTER_URLS = (import.meta.env.VITE_DELEGATED_ROUTER_URLS ?? "")
+  .split(",")
+  .map((s) => s.trim())
+  .filter(Boolean);
+if (DELEGATED_ROUTER_URLS.length === 0) {
+  throw new Error(
+    "VITE_DELEGATED_ROUTER_URLS must be set to a non-empty comma-separated list",
+  );
+}
 const SHELL_ASSETS = __SHELL_ASSETS__;
 const BYPASS_PREFIXES = __BYPASS_PREFIXES__;
 const PRECACHE = ["/", ...SHELL_ASSETS];
@@ -85,7 +94,10 @@ interface Runtime {
 let runtimeP: Promise<Runtime> | null = null;
 
 async function createRuntime(): Promise<Runtime> {
-  const helia = await createGatewayHelia({ namespace: GATEWAY_DOMAIN });
+  const helia = await createGatewayHelia({
+    namespace: GATEWAY_DOMAIN,
+    routerUrls: DELEGATED_ROUTER_URLS,
+  });
   const store = createSiteMountStore(helia.datastore);
   const policy = createMountPolicy({ store, helia });
   const ipns = createIpnsResolver(helia as never);

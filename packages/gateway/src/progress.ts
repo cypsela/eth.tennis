@@ -1,7 +1,8 @@
 /**
  * Maps a Helia onProgress event to a terminal line, or null if we do not
- * surface it. We retrieve blocks over HTTP from a trustless gateway and do not
- * run a libp2p/DHT node, so only the gateway block-fetch events are surfaced.
+ * surface it. Providers come from delegated routing and blocks are fetched
+ * over HTTP from the trustless gateways they point to, so only the gateway
+ * block-fetch events are surfaced.
  */
 export function progressEventToLine(
   type: string,
