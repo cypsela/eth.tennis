@@ -69,6 +69,10 @@ const FETCH_BUDGET = {
   fetchTimeoutMs: 120_000,
 } as const;
 
+// The bootstrap root is a single block: profiling measured router lookup plus
+// first block at about 3.4 s p99 (2026-10-31).
+const ROOT_TIMEOUT_MS = 30_000;
+
 function isShellAsset(pathname: string): boolean {
   if (BYPASS_PATHS.has(pathname)) return true;
   return BYPASS_PREFIXES.some((p) => pathname.startsWith(p));
@@ -120,7 +124,7 @@ async function createRuntime(): Promise<Runtime> {
     fetchers: { ipfs },
   };
   const ensurePinned = createEnsurePinned(helia, {
-    rootTimeoutMs: FETCH_BUDGET.fetchTimeoutMs,
+    rootTimeoutMs: ROOT_TIMEOUT_MS,
   });
   const updateCheck = createUpdateCheck({
     ensurePinned,

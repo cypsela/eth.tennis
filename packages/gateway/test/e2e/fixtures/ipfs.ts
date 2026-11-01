@@ -131,7 +131,7 @@ export async function installIpfsFixture(
     const url = route.request().url();
     const providers = ROUTER_PROVIDERS_PATTERN.exec(url);
     if (providers) {
-      const key = keyOf(providers[1]);
+      const key = keyOf(providers[1]!);
       const held = key != null && blocks.has(key);
       return route.fulfill({
         status: 200,

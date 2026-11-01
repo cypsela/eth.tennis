@@ -2,11 +2,10 @@ import { expect, test } from "./setup.ts";
 
 const SLOW_CID = "bafybeieu3t6kkkie7g7c2lfkmefbakge7jsk6yggbaez6iwghxlmwnix5m";
 
-// FETCH_BUDGET.fetchTimeoutMs is 120000ms. 125000ms exceeds it on every block,
-// so the gateway's per-fetch path always times out when fetching a fresh
-// slow.html block. Only that file is slow: the bootstrap root fetch is
-// budgeted at the same 120s and must succeed first.
-const SLOW_BLOCK_DELAY_MS = 125_000;
+// The slow block never answers ("infinity"), so the 120s FETCH_BUDGET
+// fetchTimeoutMs always fires when fetching a fresh slow.html block, with no
+// race against a finite delay. Only that file is slow: the bootstrap root
+// fetch must succeed first.
 
 test.describe("sub-resource fetch errors surface via x-gateway-error-class", () => {
   test.use({
@@ -18,7 +17,7 @@ test.describe("sub-resource fetch errors surface via x-gateway-error-class", () 
           "/slow.html": "<h1>slow</h1>",
         },
         slowPaths: ["/slow.html"],
-        delayMs: SLOW_BLOCK_DELAY_MS,
+        delayMs: "infinity",
       },
     },
   });

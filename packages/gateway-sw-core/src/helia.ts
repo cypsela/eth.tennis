@@ -20,10 +20,10 @@ export interface GatewayHeliaOpts {
 const DEFAULT_NAMESPACE = "@cypsela/gateway-sw-core";
 
 /** Address types a browser can dial: https gateways and secure websockets. */
-export const DEFAULT_FILTER_ADDRS = ["https", "wss", "tls"];
+export const DEFAULT_FILTER_ADDRS: readonly string[] = ["https", "wss", "tls"];
 
 /** Provider protocols a browser can fetch from. */
-export const DEFAULT_FILTER_PROTOCOLS = [
+export const DEFAULT_FILTER_PROTOCOLS: readonly string[] = [
   "transport-bitswap",
   "transport-ipfs-gateway-http",
   "unknown",
@@ -53,8 +53,11 @@ export function delegatedRetrievalInit(
     routers: routerUrls.map((url) =>
       delegatedHTTPRouter({
         url,
-        filterAddrs: DEFAULT_FILTER_ADDRS,
-        filterProtocols: DEFAULT_FILTER_PROTOCOLS,
+        filterAddrs: [...DEFAULT_FILTER_ADDRS],
+        filterProtocols: [...DEFAULT_FILTER_PROTOCOLS],
+        // Do not store router answers (including negative ones) in the SW's
+        // Cache Storage.
+        cacheTTL: 0,
       })
     ),
   };
@@ -63,6 +66,8 @@ export function delegatedRetrievalInit(
 /**
  * Adds a minimal browser libp2p node and bitswap to a helia node. It only
  * dials providers the routers return: no peer discovery, no listen addresses.
+ * Bitswap never rejects for an unknown CID, so every fetch depends on a caller
+ * signal (this is why the bootstrap root budget exists).
  */
 export function withDelegatedNetworking<H extends Helia>(
   helia: H,

@@ -6,6 +6,9 @@ export interface PinHooks {
   onSuccess?: () => void;
   onFailure?: (err: unknown) => void;
   onProgress?: (evt: { type: string; detail: unknown; }) => void;
+}
+
+export interface PinOptions {
   /** Aborts the pin if the root block has not arrived in this many ms. */
   rootTimeoutMs?: number;
 }
@@ -14,17 +17,18 @@ export async function fetchRootThenDrain(
   helia: Pick<Helia, "pins">,
   cid: CID,
   hooks?: PinHooks,
+  opts?: PinOptions,
 ): Promise<void> {
   // Breadth-first so the directory structure and the first block of every
   // file are cached before any one file's deep blocks.
   const controller = new AbortController();
-  const timer = hooks?.rootTimeoutMs != null
+  const timer = opts?.rootTimeoutMs != null
     ? setTimeout(
       () =>
         controller.abort(
-          new Error(`root block not fetched in ${hooks.rootTimeoutMs}ms`),
+          new Error(`root block not fetched in ${opts.rootTimeoutMs}ms`),
         ),
-      hooks.rootTimeoutMs,
+      opts.rootTimeoutMs,
     )
     : undefined;
   const addOpts = {
@@ -64,7 +68,7 @@ export type EnsurePinned = (cid: CID, hooks?: PinHooks) => Promise<void>;
 
 export function createEnsurePinned(
   helia: Pick<Helia, "pins">,
-  opts?: { rootTimeoutMs?: number; },
+  opts?: PinOptions,
 ): EnsurePinned {
   const inflight = new Map<
     string,
@@ -84,9 +88,6 @@ export function createEnsurePinned(
     }
     const allHooks: PinHooks[] = hooks ? [hooks] : [];
     const promise = fetchRootThenDrain(helia, cid, {
-      ...(opts?.rootTimeoutMs != null
-        ? { rootTimeoutMs: opts.rootTimeoutMs }
-        : {}),
       onProgress: (evt) => {
         for (const h of allHooks) h.onProgress?.(evt);
       },
@@ -99,7 +100,7 @@ export function createEnsurePinned(
         inflight.delete(k);
         for (const h of allHooks) h.onFailure?.(err);
       },
-    })
+    }, opts)
       .catch((err) => {
         inflight.delete(k);
         throw err;

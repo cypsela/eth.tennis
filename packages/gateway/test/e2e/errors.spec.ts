@@ -163,22 +163,23 @@ test.describe("content-unreachable when the router returns no providers", () => 
     rpc: {
       "noprov.eth": {
         protocol: "ipfs",
+        // No fixture holds this CID, so the router returns no providers.
         cid: "bafybeidzx4bdinhpdc62rppw4aoqwshigmkcrvfemhyxuqpotigcyzflsu",
       },
     },
     ipfs: {},
   });
 
-  // The bootstrap root fetch is budgeted at FETCH_BUDGET.fetchTimeoutMs
-  // (120s), after which the SW reports content-unreachable.
+  // The bootstrap root fetch is budgeted at 30s (ROOT_TIMEOUT_MS in sw.ts),
+  // after which the SW reports content-unreachable.
   test("a CID with no providers surfaces as content-unreachable", async ({ page }) => {
-    test.setTimeout(240_000);
+    test.setTimeout(90_000);
     await page.goto("http://noprov.eth.tennis.localhost:5173/");
     await expect(
       page.locator(".line.level-error").filter({
         hasText: "content-unreachable",
       }),
     )
-      .toBeVisible({ timeout: 200_000 });
+      .toBeVisible({ timeout: 60_000 });
   });
 });

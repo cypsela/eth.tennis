@@ -31,6 +31,12 @@ describe("createGatewayHelia (smoke)", () => {
 });
 
 describe("delegatedRetrievalInit", () => {
+  const noop = Object.assign(() => {}, {
+    error: () => {},
+    trace: () => {},
+    enabled: false,
+  });
+  const logger = { forComponent: () => noop };
   const realFetch = globalThis.fetch;
   afterEach(() => {
     globalThis.fetch = realFetch;
@@ -79,6 +85,21 @@ describe("delegatedRetrievalInit", () => {
       expect(q.get("filter-protocols")).toBe(
         "transport-bitswap,transport-ipfs-gateway-http,unknown",
       );
+    }
+  });
+
+  test("disables the delegated client cache on every router", async () => {
+    const { routers } = delegatedRetrievalInit([
+      "https://r1.test",
+      "https://r2.test",
+    ]);
+    expect(routers).toHaveLength(2);
+    for (const make of routers) {
+      const router = (make as any)({ logger }) as {
+        client: { cacheTTL: number; };
+      };
+      // cacheTTL 0 keeps router answers out of the SW's Cache Storage.
+      expect(router.client.cacheTTL).toBe(0);
     }
   });
 
