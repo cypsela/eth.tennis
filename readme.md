@@ -31,9 +31,9 @@ mapping. User-configurable RPC and light-client mode are post-v1 work.
 3. SW uses `@ensdomains/ensjs` to look up the contenthash, then
    `@helia/verified-fetch` to retrieve and verify the content. Providers
    and IPNS records come from the configured delegated router(s); blocks
-   come from those providers over HTTPS or bitswap over secure
-   WebSockets. Routers and providers are untrusted, since every block
-   and record is verified in the browser.
+   come from those providers' HTTPS trustless gateways. Routers and
+   providers are untrusted, since every block and record is verified in
+   the browser.
 4. Bootstrap triggers a reload; the SW now controls the origin and serves
    content and sub-resources from its primed cache.
 5. Warm visits skip the bootstrap entirely — the SW intercepts the first

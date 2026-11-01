@@ -103,9 +103,6 @@ importers:
       '@ensdomains/ensjs':
         specifier: ^4.2.0
         version: 4.2.2(typescript@6.0.3)(viem@2.43.1(typescript@6.0.3))
-      '@helia/bitswap':
-        specifier: ^4.0.20
-        version: 4.0.20(react-native@0.85.1(@babel/core@7.29.0(supports-color@10.2.2))(react@19.2.5)(supports-color@10.2.2))(supports-color@10.2.2)
       '@helia/delegated-routing-client':
         specifier: ^1.0.7
         version: 1.0.7
@@ -118,27 +115,12 @@ importers:
       '@helia/ipns':
         specifier: ^10.2.2
         version: 10.2.2
-      '@helia/libp2p':
-        specifier: ^2.1.5
-        version: 2.1.5(react-native@0.85.1(@babel/core@7.29.0(supports-color@10.2.2))(react@19.2.5)(supports-color@10.2.2))(supports-color@10.2.2)
       '@helia/trustless-gateway-client':
         specifier: ^1.0.7
         version: 1.0.7
       '@helia/verified-fetch':
         specifier: ^8.1.2
         version: 8.1.2(react-native@0.85.1(@babel/core@7.29.0(supports-color@10.2.2))(react@19.2.5)(supports-color@10.2.2))(supports-color@10.2.2)
-      '@libp2p/identify':
-        specifier: ^4.1.18
-        version: 4.1.18
-      '@libp2p/noise':
-        specifier: ^17.0.7
-        version: 17.0.7
-      '@libp2p/websockets':
-        specifier: ^10.1.25
-        version: 10.1.25
-      '@libp2p/yamux':
-        specifier: ^8.0.7
-        version: 8.0.7
       blockstore-idb:
         specifier: ^4.0.1
         version: 4.0.1

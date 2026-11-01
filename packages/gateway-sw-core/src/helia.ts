@@ -1,12 +1,6 @@
-import { withBitswap } from "@helia/bitswap";
 import { delegatedHTTPRouter } from "@helia/delegated-routing-client";
 import type { Helia } from "@helia/interface";
-import { type HeliaWithLibp2p, withLibp2pLight } from "@helia/libp2p";
 import { trustlessGatewayBlockBroker } from "@helia/trustless-gateway-client";
-import { type Identify, identify } from "@libp2p/identify";
-import { noise } from "@libp2p/noise";
-import { webSockets } from "@libp2p/websockets";
-import { yamux } from "@libp2p/yamux";
 import { IDBBlockstore } from "blockstore-idb";
 import { IDBDatastore } from "datastore-idb";
 import { createHeliaLight, type HeliaInit } from "helia";
@@ -19,12 +13,11 @@ export interface GatewayHeliaOpts {
 
 const DEFAULT_NAMESPACE = "@cypsela/gateway-sw-core";
 
-/** Address types a browser can dial: https gateways and secure websockets. */
-export const DEFAULT_FILTER_ADDRS: readonly string[] = ["https", "wss", "tls"];
+/** Address types the SW fetches from: https trustless gateways. */
+export const DEFAULT_FILTER_ADDRS: readonly string[] = ["https"];
 
 /** Provider protocols a browser can fetch from. */
 export const DEFAULT_FILTER_PROTOCOLS: readonly string[] = [
-  "transport-bitswap",
   "transport-ipfs-gateway-http",
   "unknown",
 ];
@@ -38,9 +31,8 @@ export function deriveDbNames(
 
 /**
  * Retrieval config: providers and IPNS records come from the delegated
- * routers, filtered to what a browser can reach. Blocks are fetched from the
- * https gateways those routers return; `withDelegatedNetworking` adds bitswap
- * for websocket providers.
+ * routers, filtered to https providers. Blocks are fetched over HTTP from the
+ * trustless gateways those providers run. No libp2p.
  */
 export function delegatedRetrievalInit(
   routerUrls: readonly string[],
@@ -63,25 +55,6 @@ export function delegatedRetrievalInit(
   };
 }
 
-/**
- * Adds a minimal browser libp2p node and bitswap to a helia node. It only
- * dials providers the routers return: no peer discovery, no listen addresses.
- * Bitswap never rejects for an unknown CID, so every fetch depends on a caller
- * signal (this is why the bootstrap root budget exists).
- */
-export function withDelegatedNetworking<H extends Helia>(
-  helia: H,
-): HeliaWithLibp2p<{ identify: Identify; }> {
-  return withBitswap(
-    withLibp2pLight(helia, {
-      transports: [webSockets()],
-      connectionEncrypters: [noise()],
-      streamMuxers: [yamux()],
-      services: { identify: identify() },
-    }),
-  );
-}
-
 export async function createGatewayHelia(
   opts: GatewayHeliaOpts,
 ): Promise<Helia> {
@@ -92,12 +65,10 @@ export async function createGatewayHelia(
   // Startable.start()/stop(), which these don't implement.
   await blockstore.open();
   await datastore.open();
-  return withDelegatedNetworking(
-    createHeliaLight({
-      blockstore,
-      datastore,
-      ...delegatedRetrievalInit(opts.routerUrls),
-    }),
-  )
+  return createHeliaLight({
+    blockstore,
+    datastore,
+    ...delegatedRetrievalInit(opts.routerUrls),
+  })
     .start();
 }

@@ -81,9 +81,9 @@ describe("delegatedRetrievalInit", () => {
       const url = requested.find((u) => new URL(u).host === host);
       expect(url, host).toBeDefined();
       const q = new URL(url!).searchParams;
-      expect(q.get("filter-addrs")).toBe("https,wss,tls");
+      expect(q.get("filter-addrs")).toBe("https");
       expect(q.get("filter-protocols")).toBe(
-        "transport-bitswap,transport-ipfs-gateway-http,unknown",
+        "transport-ipfs-gateway-http,unknown",
       );
     }
   });
