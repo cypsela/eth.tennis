@@ -1,10 +1,11 @@
 import { expect, test } from "./setup.ts";
 
-const SLOW_CID = "bafybeidzx4bdinhpdc62rppw4aoqwshigmkcrvfemhyxuqpotigcyzflsu";
+const SLOW_CID = "bafybeieu3t6kkkie7g7c2lfkmefbakge7jsk6yggbaez6iwghxlmwnix5m";
 
 // FETCH_BUDGET.fetchTimeoutMs is 120000ms. 125000ms exceeds it on every block,
 // so the gateway's per-fetch path always times out when fetching a fresh
-// block.
+// slow.html block. Only that file is slow: the bootstrap root fetch is
+// budgeted at the same 120s and must succeed first.
 const SLOW_BLOCK_DELAY_MS = 125_000;
 
 test.describe("sub-resource fetch errors surface via x-gateway-error-class", () => {
@@ -12,7 +13,11 @@ test.describe("sub-resource fetch errors surface via x-gateway-error-class", () 
     rpc: { "vitalik.eth": { protocol: "ipfs", cid: SLOW_CID } },
     ipfs: {
       [SLOW_CID]: {
-        files: { "/index.html": "<h1>hello vitalik</h1>" },
+        files: {
+          "/index.html": "<h1>hello vitalik</h1>",
+          "/slow.html": "<h1>slow</h1>",
+        },
+        slowPaths: ["/slow.html"],
         delayMs: SLOW_BLOCK_DELAY_MS,
       },
     },
@@ -38,11 +43,17 @@ test.describe("sub-resource fetch errors surface via x-gateway-error-class", () 
       });
     });
 
-    // Bootstrap waits for the root block (~125s), then triggers a reload.
-    // The reload's navigation fetches the index.html block fresh — the SW's
-    // 120s fetch budget fires first, so the navigation returns the gateway's
-    // error response. We assert the response shape.
+    // Bootstrap fetches the root and index.html quickly, then reloads. A
+    // navigation to slow.html fetches its block fresh; the SW's 120s fetch
+    // budget fires first, so it returns the gateway's error response. We
+    // assert the response shape.
     await page.goto("http://vitalik.eth.tennis.localhost:5173/");
+    await expect(page.getByText("hello vitalik")).toBeVisible({
+      timeout: 60_000,
+    });
+    await page.goto("http://vitalik.eth.tennis.localhost:5173/slow.html").catch(
+      () => {},
+    );
 
     // Wait until at least one gateway response has the x-gateway-error-class
     // header set (i.e., the bug path fired).

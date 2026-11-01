@@ -11,7 +11,12 @@ import { fileURLToPath } from "node:url";
 
 export type IpfsFixtures = Record<
   string, // expected root CID
-  { files: Record<string, string | Uint8Array>; delayMs?: number | "infinity"; }
+  {
+    files: Record<string, string | Uint8Array>;
+    delayMs?: number | "infinity";
+    /** When set, delayMs applies only to the blocks of these file paths. */
+    slowPaths?: string[];
+  }
 >;
 
 const FIXTURES_ROOT = fileURLToPath(
@@ -56,7 +61,11 @@ export async function installIpfsFixture(
   const blocks = new Map<string, Uint8Array>();
   const delays = new Map<string, number | "infinity">();
 
-  for (const [expectedCid, { files, delayMs }] of Object.entries(fixtures)) {
+  for (
+    const [expectedCid, { files, delayMs, slowPaths }] of Object.entries(
+      fixtures,
+    )
+  ) {
     const blockstore = new MemoryBlockstore();
     const helia = await createHelia({
       blockstore,
@@ -71,10 +80,14 @@ export async function installIpfsFixture(
           : content,
       }));
       let rootCid: CID | undefined;
+      const slowKeys = new Set<string>();
       for await (
         const entry of fs.addAll(candidates, { wrapWithDirectory: true })
       ) {
         rootCid = entry.cid;
+        if (entry.path && slowPaths?.includes(`/${entry.path}`)) {
+          slowKeys.add(base32.encode(entry.cid.multihash.bytes));
+        }
       }
       if (!rootCid) {
         throw new Error("installIpfsFixture: no root produced by addAll");
@@ -97,7 +110,9 @@ export async function installIpfsFixture(
         }
         const key = base32.encode(pair.cid.multihash.bytes);
         blocks.set(key, flat);
-        if (delayMs != null) delays.set(key, delayMs);
+        if (delayMs != null && (!slowPaths || slowKeys.has(key))) {
+          delays.set(key, delayMs);
+        }
       }
     } finally {
       await helia.stop();

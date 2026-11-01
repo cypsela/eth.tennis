@@ -176,3 +176,56 @@ describe("createEnsurePinned", () => {
     expect(helia.pins.add).toHaveBeenCalledTimes(2);
   });
 });
+
+describe("root fetch budget", () => {
+  test("ensurePinned rejects when the root never arrives", async () => {
+    const add = vi.fn((_cid: CID, opts: { signal: AbortSignal; }) => {
+      const gen = {
+        next: () =>
+          new Promise<IteratorResult<CID>>((_, reject) => {
+            opts.signal.addEventListener("abort", () =>
+              reject(
+                opts
+                  .signal
+                  .reason,
+              ));
+          }),
+        [Symbol.asyncIterator]() {
+          return gen;
+        },
+      };
+      return gen as unknown as AsyncGenerator<CID>;
+    });
+    const ensurePinned = createEnsurePinned({ pins: { add } } as any, {
+      rootTimeoutMs: 20,
+    });
+    await expect(ensurePinned(SAMPLE_CID)).rejects.toThrow(/root block/);
+  });
+
+  test("a slow drain after the root arrives is not aborted", async () => {
+    let signal!: AbortSignal;
+    let i = 0;
+    const add = vi.fn((_cid: CID, opts: { signal: AbortSignal; }) => {
+      signal = opts.signal;
+      const gen = {
+        next: async () => {
+          if (i++ === 0) return { value: SAMPLE_CID, done: false };
+          await new Promise((r) => setTimeout(r, 80));
+          return { value: undefined as unknown as CID, done: true };
+        },
+        [Symbol.asyncIterator]() {
+          return gen;
+        },
+      };
+      return gen as unknown as AsyncGenerator<CID>;
+    });
+    const onSuccess = vi.fn();
+    const ensurePinned = createEnsurePinned({ pins: { add } } as any, {
+      rootTimeoutMs: 20,
+    });
+    await ensurePinned(SAMPLE_CID, { onSuccess });
+    await new Promise((r) => setTimeout(r, 150));
+    expect(signal.aborted).toBe(false);
+    expect(onSuccess).toHaveBeenCalledTimes(1);
+  });
+});

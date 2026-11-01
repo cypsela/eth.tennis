@@ -158,7 +158,7 @@ test.describe("dnslink-record-not-found when DoH returns NXDOMAIN", () => {
   });
 });
 
-test.describe("bootstrap keeps retrying when the router returns no providers", () => {
+test.describe("content-unreachable when the router returns no providers", () => {
   test.use({
     rpc: {
       "noprov.eth": {
@@ -169,13 +169,16 @@ test.describe("bootstrap keeps retrying when the router returns no providers", (
     ipfs: {},
   });
 
-  // The bootstrap pin has no time budget of its own, so an unprovided root
-  // CID neither renders nor surfaces an error class; it stays on "fetching".
-  test("a CID with no providers stays on the fetching line without an error", async ({ page }) => {
+  // The bootstrap root fetch is budgeted at FETCH_BUDGET.fetchTimeoutMs
+  // (120s), after which the SW reports content-unreachable.
+  test("a CID with no providers surfaces as content-unreachable", async ({ page }) => {
+    test.setTimeout(240_000);
     await page.goto("http://noprov.eth.tennis.localhost:5173/");
-    await expect(page.locator(".line").filter({ hasText: "fetching ipfs://" }))
-      .toBeVisible({ timeout: 30_000 });
-    await page.waitForTimeout(15_000);
-    await expect(page.locator(".line.level-error")).toHaveCount(0);
+    await expect(
+      page.locator(".line.level-error").filter({
+        hasText: "content-unreachable",
+      }),
+    )
+      .toBeVisible({ timeout: 200_000 });
   });
 });

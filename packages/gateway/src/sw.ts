@@ -119,7 +119,9 @@ async function createRuntime(): Promise<Runtime> {
     },
     fetchers: { ipfs },
   };
-  const ensurePinned = createEnsurePinned(helia);
+  const ensurePinned = createEnsurePinned(helia, {
+    rootTimeoutMs: FETCH_BUDGET.fetchTimeoutMs,
+  });
   const updateCheck = createUpdateCheck({
     ensurePinned,
     handlers,
