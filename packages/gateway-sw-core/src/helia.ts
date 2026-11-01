@@ -1,33 +1,33 @@
+import { withBitswap } from "@helia/bitswap";
+import { delegatedHTTPRouter } from "@helia/delegated-routing-client";
 import type { Helia } from "@helia/interface";
+import { type HeliaWithLibp2p, withLibp2pLight } from "@helia/libp2p";
+import { trustlessGatewayBlockBroker } from "@helia/trustless-gateway-client";
+import { type Identify, identify } from "@libp2p/identify";
+import { noise } from "@libp2p/noise";
+import { webSockets } from "@libp2p/websockets";
+import { yamux } from "@libp2p/yamux";
 import { IDBBlockstore } from "blockstore-idb";
 import { IDBDatastore } from "datastore-idb";
 import { createHeliaLight, type HeliaInit } from "helia";
-import {
-  gatewayBlockBroker,
-  type GatewayConfig,
-} from "./retrieval/gateway-block-broker.js";
-import { gatewayIpnsRouting } from "./routers/gateway-ipns.js";
 
 export interface GatewayHeliaOpts {
   namespace?: string;
-  /** Trustless gateways in preference order: the first is the primary. */
-  gateways?: readonly GatewayConfig[];
+  /** Delegated Routing V1 HTTP endpoints, queried for providers and IPNS records. */
+  routerUrls: readonly string[];
 }
 
 const DEFAULT_NAMESPACE = "@cypsela/gateway-sw-core";
 
-/**
- * ipfs.filebase.io rate limits by request count: it serves about 100 requests
- * back to back, then refills at a little under 2 per second, and answers
- * anything beyond that with 429 (measured 2026-10-01). The limits stay inside
- * that envelope.
- */
-export const DEFAULT_GATEWAYS: readonly GatewayConfig[] = [{
-  url: "https://ipfs.filebase.io",
-  maxConcurrent: 16,
-  burst: 80,
-  perSecond: 1.5,
-}];
+/** Address types a browser can dial: https gateways and secure websockets. */
+export const DEFAULT_FILTER_ADDRS = ["https", "wss", "tls"];
+
+/** Provider protocols a browser can fetch from. */
+export const DEFAULT_FILTER_PROTOCOLS = [
+  "transport-bitswap",
+  "transport-ipfs-gateway-http",
+  "unknown",
+];
 
 export function deriveDbNames(
   opts: Pick<GatewayHeliaOpts, "namespace"> = {},
@@ -37,20 +37,48 @@ export function deriveDbNames(
 }
 
 /**
- * Retrieval config: blocks and IPNS records both come from the configured
- * trustless gateways. No delegated routing, no libp2p.
+ * Retrieval config: providers and IPNS records come from the delegated
+ * routers, filtered to what a browser can reach. Blocks are fetched from the
+ * https gateways those routers return; `withDelegatedNetworking` adds bitswap
+ * for websocket providers.
  */
-export function gatewayRetrievalInit(
-  gateways: readonly GatewayConfig[] = DEFAULT_GATEWAYS,
+export function delegatedRetrievalInit(
+  routerUrls: readonly string[],
 ): Required<Pick<HeliaInit, "blockBrokers" | "routers">> {
+  if (routerUrls.length === 0) {
+    throw new Error("at least one delegated router URL is required");
+  }
   return {
-    blockBrokers: [gatewayBlockBroker({ gateways })],
-    routers: [gatewayIpnsRouting({ gateways: gateways.map((g) => g.url) })],
+    blockBrokers: [trustlessGatewayBlockBroker()],
+    routers: routerUrls.map((url) =>
+      delegatedHTTPRouter({
+        url,
+        filterAddrs: DEFAULT_FILTER_ADDRS,
+        filterProtocols: DEFAULT_FILTER_PROTOCOLS,
+      })
+    ),
   };
 }
 
+/**
+ * Adds a minimal browser libp2p node and bitswap to a helia node. It only
+ * dials providers the routers return: no peer discovery, no listen addresses.
+ */
+export function withDelegatedNetworking<H extends Helia>(
+  helia: H,
+): HeliaWithLibp2p<{ identify: Identify; }> {
+  return withBitswap(
+    withLibp2pLight(helia, {
+      transports: [webSockets()],
+      connectionEncrypters: [noise()],
+      streamMuxers: [yamux()],
+      services: { identify: identify() },
+    }),
+  );
+}
+
 export async function createGatewayHelia(
-  opts: GatewayHeliaOpts = {},
+  opts: GatewayHeliaOpts,
 ): Promise<Helia> {
   const { blocks, data } = deriveDbNames(opts);
   const blockstore = new IDBBlockstore(blocks);
@@ -59,10 +87,12 @@ export async function createGatewayHelia(
   // Startable.start()/stop(), which these don't implement.
   await blockstore.open();
   await datastore.open();
-  return createHeliaLight({
-    blockstore,
-    datastore,
-    ...gatewayRetrievalInit(opts.gateways),
-  })
+  return withDelegatedNetworking(
+    createHeliaLight({
+      blockstore,
+      datastore,
+      ...delegatedRetrievalInit(opts.routerUrls),
+    }),
+  )
     .start();
 }

@@ -1,5 +1,13 @@
-import { describe, expect, test } from "vitest";
-import { deriveDbNames } from "../src/helia.js";
+import { MemoryBlockstore } from "blockstore-core";
+import { MemoryDatastore } from "datastore-core";
+import { createHeliaLight } from "helia";
+import { CID } from "multiformats/cid";
+import { afterEach, describe, expect, test } from "vitest";
+import { delegatedRetrievalInit, deriveDbNames } from "../src/helia.js";
+import { createIpnsResolver } from "../src/resolvers/ipns.js";
+
+// sha2-256 of zero bytes: a block we can serve and have verified
+const EMPTY_CID = "bafkreihdwdcefgh4dqkjv67uzcmw7ojee6xedzdetojuzjevtenxquvyku";
 
 describe("deriveDbNames", () => {
   test("default namespace yields library-prefixed DB names", () => {
@@ -22,60 +30,126 @@ describe("createGatewayHelia (smoke)", () => {
   });
 });
 
-describe("gatewayRetrievalInit", () => {
-  test("defaults to ipfs.filebase.io, shaped inside its rate limit", async () => {
-    const { DEFAULT_GATEWAYS } = await import("../src/helia.js");
-    expect(DEFAULT_GATEWAYS.map((g) => g.url)).toEqual([
-      "https://ipfs.filebase.io",
-    ]);
-    // about 100 back to back, then a little under 2 per second
-    expect(DEFAULT_GATEWAYS[0]!.burst).toBeLessThan(100);
-    expect(DEFAULT_GATEWAYS[0]!.perSecond).toBeLessThan(2);
+describe("delegatedRetrievalInit", () => {
+  const realFetch = globalThis.fetch;
+  afterEach(() => {
+    globalThis.fetch = realFetch;
   });
 
-  test("retrieves only through the gateways: no delegated routing", async () => {
-    const { gatewayRetrievalInit } = await import("../src/helia.js");
-    const init = gatewayRetrievalInit([{
-      url: "https://gw.example",
-      maxConcurrent: 4,
-    }]);
-    expect(init.blockBrokers.map((b) => (b as { name?: string; }).name))
-      .toEqual(["gateway-block-broker"]);
-    expect(init.routers.map((r) => (r as { name?: string; }).name)).toEqual([
-      "gateway-ipns-router",
-    ]);
-  });
+  const json = (body: unknown) =>
+    new Response(JSON.stringify(body), {
+      status: 200,
+      headers: { "content-type": "application/json" },
+    });
 
-  test("a node built from the config fetches blocks from the gateway", async () => {
-    const { createHeliaLight } = await import("helia");
-    const { CID } = await import("multiformats/cid");
-    const { gatewayRetrievalInit } = await import("../src/helia.js");
-    // sha2-256 of zero bytes: a block we can serve and have verified
-    const cid = CID.parse(
-      "bafkreihdwdcefgh4dqkjv67uzcmw7ojee6xedzdetojuzjevtenxquvyku",
+  test("throws without router URLs", () => {
+    expect(() => delegatedRetrievalInit([])).toThrow(
+      "at least one delegated router URL is required",
     );
+  });
+
+  test("queries every router with the browser filters", async () => {
     const requested: string[] = [];
-    const realFetch = globalThis.fetch;
-    globalThis.fetch = (async (url: string) => {
-      requested.push(url);
-      return new Response(new Uint8Array(0), { status: 200 });
+    globalThis.fetch = (async (input: RequestInfo | URL) => {
+      requested.push(String(input instanceof Request ? input.url : input));
+      return json({ Providers: [] });
     }) as typeof fetch;
-    const helia = await createHeliaLight(
-      gatewayRetrievalInit([{ url: "https://gw.example", maxConcurrent: 4 }]),
-    )
+    const helia = await createHeliaLight({
+      blockstore: new MemoryBlockstore(),
+      datastore: new MemoryDatastore(),
+      ...delegatedRetrievalInit(["https://r1.test", "https://r2.test"]),
+    })
       .start();
     try {
-      const got = await helia.blockstore.get(cid, {
-        signal: AbortSignal.timeout(2000),
-      }) as Uint8Array | AsyncIterable<Uint8Array>;
-      if (!(got instanceof Uint8Array)) {
-        for await (const _ of got) {
-          /* drain */
-        }
+      for await (
+        const _ of helia.routing.findProviders(CID.parse(EMPTY_CID), {
+          signal: AbortSignal.timeout(2000),
+        })
+      ) {
+        /* drain */
       }
-      expect(requested).toEqual([`https://gw.example/ipfs/${cid}?format=raw`]);
     } finally {
-      globalThis.fetch = realFetch;
+      await helia.stop();
+    }
+    for (const host of ["r1.test", "r2.test"]) {
+      const url = requested.find((u) => new URL(u).host === host);
+      expect(url, host).toBeDefined();
+      const q = new URL(url!).searchParams;
+      expect(q.get("filter-addrs")).toBe("https,wss,tls");
+      expect(q.get("filter-protocols")).toBe(
+        "transport-bitswap,transport-ipfs-gateway-http,unknown",
+      );
+    }
+  });
+
+  test("a 200 text/plain IPNS answer is ipns-record-not-found", async () => {
+    globalThis.fetch =
+      (async () =>
+        new Response("delegate error: routing: not found", {
+          status: 200,
+          headers: { "content-type": "text/plain" },
+        })) as typeof fetch;
+    const helia = await createHeliaLight({
+      blockstore: new MemoryBlockstore(),
+      datastore: new MemoryDatastore(),
+      ...delegatedRetrievalInit(["https://r1.test"]),
+    })
+      .start();
+    try {
+      await expect(
+        createIpnsResolver(helia).resolve({
+          kind: "address",
+          protocol: "ipns",
+          value:
+            "k51qzi5uqu5dlvj2baxnqndepeb86cbk3ng7n3i46uzyxzyqj2xjonzllnv0v8",
+        }, { signal: AbortSignal.timeout(2000) }),
+      )
+        .rejects
+        .toMatchObject({ errorClass: "ipns-record-not-found" });
+    } finally {
+      await helia.stop();
+    }
+  });
+
+  test("fetches a block from an https provider found through the router", async () => {
+    const cid = CID.parse(EMPTY_CID);
+    const requested: string[] = [];
+    globalThis.fetch = (async (input: RequestInfo | URL) => {
+      const url = String(input instanceof Request ? input.url : input);
+      requested.push(url);
+      if (url.startsWith("https://r1.test/routing/v1/providers/")) {
+        return json({
+          Providers: [{
+            Schema: "peer",
+            ID: "12D3KooWDpJ7As7BWAwRMfu1VU2WCqNjvq387JEYKDBj4kx6nXTN",
+            Protocols: ["transport-ipfs-gateway-http"],
+            Addrs: ["/dns4/p.test/tcp/443/https"],
+          }],
+        });
+      }
+      if (url === `https://p.test/ipfs/${cid}?format=raw`) {
+        return new Response(new Uint8Array(0), { status: 200 });
+      }
+      return new Response("not found", { status: 404 });
+    }) as typeof fetch;
+    const helia = await createHeliaLight({
+      blockstore: new MemoryBlockstore(),
+      datastore: new MemoryDatastore(),
+      ...delegatedRetrievalInit(["https://r1.test"]),
+    })
+      .start();
+    try {
+      let bytes = 0;
+      for await (
+        const chunk of helia.blockstore.get(cid, {
+          signal: AbortSignal.timeout(2000),
+        })
+      ) {
+        bytes += chunk.byteLength;
+      }
+      expect(bytes).toBe(0);
+      expect(requested).toContain(`https://p.test/ipfs/${cid}?format=raw`);
+    } finally {
       await helia.stop();
     }
   });
