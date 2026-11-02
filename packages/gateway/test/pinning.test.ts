@@ -31,10 +31,19 @@ function fakeIter(yields: number, throwAfter?: number): AsyncGenerator<CID> {
   return gen;
 }
 
+const SESSION = { session: true };
+
+function fakeBlockstore() {
+  return { createSession: vi.fn(() => SESSION) };
+}
+
 describe("fetchRootThenDrain", () => {
   test("returns after first yield; drains the rest in the background", async () => {
     const iter = fakeIter(5);
-    const helia = { pins: { add: vi.fn(() => iter) } } as any;
+    const helia = {
+      pins: { add: vi.fn(() => iter) },
+      blockstore: fakeBlockstore(),
+    } as any;
     const onSuccess = vi.fn();
     await fetchRootThenDrain(helia, SAMPLE_CID, { onSuccess });
     expect(helia.pins.add).toHaveBeenCalledWith(SAMPLE_CID, expect.anything());
@@ -43,10 +52,30 @@ describe("fetchRootThenDrain", () => {
   });
 
   test("walks the DAG breadth-first so shallow blocks are cached first", async () => {
-    const helia = { pins: { add: vi.fn(() => fakeIter(1)) } } as any;
+    const helia = {
+      pins: { add: vi.fn(() => fakeIter(1)) },
+      blockstore: fakeBlockstore(),
+    } as any;
     await fetchRootThenDrain(helia, SAMPLE_CID);
     const opts = helia.pins.add.mock.calls[0][1];
     expect(opts.walker({}).constructor.name).toBe("BreadthFirstGraphWalker");
+  });
+
+  test("walks through one session for the root so providers are looked up once", async () => {
+    const helia = {
+      pins: { add: vi.fn(() => fakeIter(1)) },
+      blockstore: fakeBlockstore(),
+    } as any;
+    await fetchRootThenDrain(helia, SAMPLE_CID);
+    expect(helia.blockstore.createSession).toHaveBeenCalledTimes(1);
+    expect(helia.blockstore.createSession).toHaveBeenCalledWith(
+      SAMPLE_CID,
+      expect.objectContaining({ signal: expect.any(AbortSignal) }),
+    );
+    const opts = helia.pins.add.mock.calls[0][1];
+    const walker = opts.walker({ blockstore: "networked", getCodec: "codec" });
+    expect(walker.components.blockstore).toBe(SESSION);
+    expect(walker.components.getCodec).toBe("codec");
   });
 
   test("AlreadyPinnedError at root triggers onSuccess immediately", async () => {
@@ -60,7 +89,10 @@ describe("fetchRootThenDrain", () => {
         return this;
       },
     } as any;
-    const helia = { pins: { add: vi.fn(() => iter) } } as any;
+    const helia = {
+      pins: { add: vi.fn(() => iter) },
+      blockstore: fakeBlockstore(),
+    } as any;
     const onSuccess = vi.fn();
     const onFailure = vi.fn();
     await fetchRootThenDrain(helia, SAMPLE_CID, { onSuccess, onFailure });
@@ -77,7 +109,10 @@ describe("fetchRootThenDrain", () => {
         return this;
       },
     } as any;
-    const helia = { pins: { add: vi.fn(() => iter) } } as any;
+    const helia = {
+      pins: { add: vi.fn(() => iter) },
+      blockstore: fakeBlockstore(),
+    } as any;
     await expect(fetchRootThenDrain(helia, SAMPLE_CID)).rejects.toThrow(
       "offline",
     );
@@ -85,7 +120,10 @@ describe("fetchRootThenDrain", () => {
 
   test("drain errors call onFailure, not onSuccess", async () => {
     const iter = fakeIter(3, 2);
-    const helia = { pins: { add: vi.fn(() => iter) } } as any;
+    const helia = {
+      pins: { add: vi.fn(() => iter) },
+      blockstore: fakeBlockstore(),
+    } as any;
     const onSuccess = vi.fn();
     const onFailure = vi.fn();
     await fetchRootThenDrain(helia, SAMPLE_CID, { onSuccess, onFailure });
@@ -97,7 +135,10 @@ describe("fetchRootThenDrain", () => {
 
 describe("createEnsurePinned", () => {
   test("dedups concurrent calls for the same CID", async () => {
-    const helia = { pins: { add: vi.fn(() => fakeIter(3)) } } as any;
+    const helia = {
+      pins: { add: vi.fn(() => fakeIter(3)) },
+      blockstore: fakeBlockstore(),
+    } as any;
     const ensurePinned = createEnsurePinned(helia);
     await Promise.all([
       ensurePinned(SAMPLE_CID),
@@ -108,7 +149,10 @@ describe("createEnsurePinned", () => {
   });
 
   test("after completion, repeat call resolves immediately and fires onSuccess", async () => {
-    const helia = { pins: { add: vi.fn(() => fakeIter(2)) } } as any;
+    const helia = {
+      pins: { add: vi.fn(() => fakeIter(2)) },
+      blockstore: fakeBlockstore(),
+    } as any;
     const ensurePinned = createEnsurePinned(helia);
     await ensurePinned(SAMPLE_CID);
     await new Promise((r) => setTimeout(r, 0));
@@ -119,7 +163,10 @@ describe("createEnsurePinned", () => {
   });
 
   test("per-call hooks fire on drain completion for all concurrent callers", async () => {
-    const helia = { pins: { add: vi.fn(() => fakeIter(3)) } } as any;
+    const helia = {
+      pins: { add: vi.fn(() => fakeIter(3)) },
+      blockstore: fakeBlockstore(),
+    } as any;
     const ensurePinned = createEnsurePinned(helia);
     const onSuccess1 = vi.fn();
     const onSuccess2 = vi.fn();
@@ -142,6 +189,7 @@ describe("createEnsurePinned", () => {
           .mockReturnValueOnce(failIter)
           .mockReturnValueOnce(successIter),
       },
+      blockstore: fakeBlockstore(),
     } as any;
     const ensurePinned = createEnsurePinned(helia);
     const onFailure = vi.fn();
@@ -169,6 +217,7 @@ describe("createEnsurePinned", () => {
           .mockReturnValueOnce(failIter)
           .mockReturnValueOnce(successIter),
       },
+      blockstore: fakeBlockstore(),
     } as any;
     const ensurePinned = createEnsurePinned(helia);
     await expect(ensurePinned(SAMPLE_CID)).rejects.toThrow("offline");
@@ -196,9 +245,10 @@ describe("root fetch budget", () => {
       };
       return gen as unknown as AsyncGenerator<CID>;
     });
-    const ensurePinned = createEnsurePinned({ pins: { add } } as any, {
-      rootTimeoutMs: 20,
-    });
+    const ensurePinned = createEnsurePinned(
+      { pins: { add }, blockstore: fakeBlockstore() } as any,
+      { rootTimeoutMs: 20 },
+    );
     await expect(ensurePinned(SAMPLE_CID)).rejects.toThrow(/root block/);
   });
 
@@ -220,9 +270,10 @@ describe("root fetch budget", () => {
       return gen as unknown as AsyncGenerator<CID>;
     });
     const onSuccess = vi.fn();
-    const ensurePinned = createEnsurePinned({ pins: { add } } as any, {
-      rootTimeoutMs: 20,
-    });
+    const ensurePinned = createEnsurePinned(
+      { pins: { add }, blockstore: fakeBlockstore() } as any,
+      { rootTimeoutMs: 20 },
+    );
     await ensurePinned(SAMPLE_CID, { onSuccess });
     await new Promise((r) => setTimeout(r, 150));
     expect(signal.aborted).toBe(false);

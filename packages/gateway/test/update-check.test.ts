@@ -22,7 +22,10 @@ function setup(
   terminal: { kind: "content"; protocol: string; value: string; },
 ) {
   const store = createSiteMountStore(new MemoryDatastore());
-  const helia = { pins: { add: vi.fn(() => fakeIter()), rm: vi.fn() } } as any;
+  const helia = {
+    pins: { add: vi.fn(() => fakeIter()), rm: vi.fn() },
+    blockstore: { createSession: vi.fn(() => ({})) },
+  } as any;
   const policy = createMountPolicy({ store, helia });
   const handlers: Handlers = {
     resolvers: { ens: { protocol: "ens", resolve: async () => terminal } },
@@ -66,6 +69,7 @@ describe("update-check", () => {
   test("root-fetch failure: no pending write, warn logged", async () => {
     const store = createSiteMountStore(new MemoryDatastore());
     const helia = {
+      blockstore: { createSession: vi.fn(() => ({})) },
       pins: {
         add: vi.fn(() => ({
           next: async () => {
@@ -108,6 +112,7 @@ describe("update-check", () => {
     const store = createSiteMountStore(new MemoryDatastore());
     const helia = {
       pins: { add: vi.fn(() => fakeIter()), rm: vi.fn() },
+      blockstore: { createSession: vi.fn(() => ({})) },
     } as any;
     const policy = createMountPolicy({ store, helia });
     await policy.writeCurrent(content("ipfs", CID_A));

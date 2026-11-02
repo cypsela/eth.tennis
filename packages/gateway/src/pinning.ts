@@ -14,7 +14,7 @@ export interface PinOptions {
 }
 
 export async function fetchRootThenDrain(
-  helia: Pick<Helia, "pins">,
+  helia: Pick<Helia, "pins" | "blockstore">,
   cid: CID,
   hooks?: PinHooks,
   opts?: PinOptions,
@@ -31,9 +31,18 @@ export async function fetchRootThenDrain(
       opts.rootTimeoutMs,
     )
     : undefined;
+  // Walk through a session for the root: providers are looked up once for the
+  // root and reused for every child block. Without it each block outside a
+  // session costs its own router lookup. Fetched blocks still land in the
+  // local blockstore, so the pin is recorded as usual.
+  const session = helia.blockstore.createSession(cid, {
+    signal: controller.signal,
+  });
   const addOpts = {
     signal: controller.signal,
-    walker: breadthFirstWalker(),
+    walker: (
+      components: Parameters<ReturnType<typeof breadthFirstWalker>>[0],
+    ) => breadthFirstWalker()({ ...components, blockstore: session }),
     ...(hooks?.onProgress
       ? {
         onProgress: (evt: unknown) =>
@@ -67,7 +76,7 @@ export async function fetchRootThenDrain(
 export type EnsurePinned = (cid: CID, hooks?: PinHooks) => Promise<void>;
 
 export function createEnsurePinned(
-  helia: Pick<Helia, "pins">,
+  helia: Pick<Helia, "pins" | "blockstore">,
   opts?: PinOptions,
 ): EnsurePinned {
   const inflight = new Map<
