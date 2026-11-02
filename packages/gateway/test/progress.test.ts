@@ -2,37 +2,44 @@ import { describe, expect, test } from "vitest";
 import { progressEventToLine } from "../src/progress.ts";
 
 describe("progressEventToLine", () => {
-  test("maps a trustless-gateway block fetch to a gateway host line", () => {
-    const line = progressEventToLine(
-      "trustless-gateway:get-block:fetch",
-      new URL("https://provider.test/ipfs/bafyfoo?format=raw"),
-    );
-    expect(line).toBe("fetching from provider.test");
-  });
-
-  test("accepts a string url in detail", () => {
-    const line = progressEventToLine(
-      "trustless-gateway:get-block:fetch",
-      "https://ipfs.io/ipfs/bafyfoo",
-    );
-    expect(line).toBe("fetching from ipfs.io");
-  });
-
-  test("accepts a {url} object with a URL value in detail", () => {
-    const line = progressEventToLine("trustless-gateway:get-block:fetch", {
-      url: new URL("https://cdn.example.com/ipfs/bafyfoo"),
-    });
-    expect(line).toBe("fetching from cdn.example.com");
-  });
-
-  test("returns 'fetching block' when detail has no parseable URL", () => {
-    expect(progressEventToLine("trustless-gateway:get-block:fetch", null)).toBe(
-      "fetching block",
+  test("announces the provider lookup", () => {
+    expect(progressEventToLine("helia:routing:find-providers:start", {})).toBe(
+      "finding providers",
     );
   });
 
-  test("returns null for events we do not surface", () => {
-    expect(progressEventToLine("helia:routing:find-providers:start", undefined))
+  test("names each provider the router found", () => {
+    expect(
+      progressEventToLine("trustless-gateway:found-provider", {
+        url: "https://provider.test/",
+        router: "delegated-http-router",
+      }),
+    )
+      .toBe("provider provider.test");
+  });
+
+  test("names the endpoint a block is fetched from", () => {
+    expect(
+      progressEventToLine("helia:block-brokers:query-provider:start", {
+        blockBroker: "trustless-gateway",
+        provider: new URL("https://provider.test/"),
+        transport: "http",
+      }),
+    )
+      .toBe("fetching from provider.test");
+  });
+
+  test("returns null when a provider event has no parseable url", () => {
+    expect(progressEventToLine("trustless-gateway:found-provider", {}))
+      .toBeNull();
+    expect(
+      progressEventToLine("helia:block-brokers:query-provider:start", null),
+    )
+      .toBeNull();
+  });
+
+  test("does not surface per-block or unrelated events", () => {
+    expect(progressEventToLine("helia:block-broker:receive-block", {}))
       .toBeNull();
     expect(progressEventToLine("blocks:get:blockstore:get", {})).toBeNull();
   });

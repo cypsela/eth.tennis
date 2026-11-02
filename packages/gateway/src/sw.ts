@@ -242,13 +242,15 @@ sw.addEventListener("message", (event) => {
         text: `fetching ${formatRef(fresh)}`,
       });
       const { CID } = await import("multiformats/cid");
-      let lastProgressLine = "";
+      // Show each distinct line once: a provider or endpoint is named the first
+      // time it appears, not for every block.
+      const shownProgressLines = new Set<string>();
       try {
         await ensurePinned(CID.parse(fresh.value), {
           onProgress: (evt) => {
             const line = progressEventToLine(evt.type, evt.detail);
-            if (!line || line === lastProgressLine) return;
-            lastProgressLine = line;
+            if (!line || shownProgressLines.has(line)) return;
+            shownProgressLines.add(line);
             source?.postMessage({
               type: "log",
               source: "sw",

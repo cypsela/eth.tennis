@@ -1,18 +1,28 @@
 /**
  * Maps a Helia onProgress event to a terminal line, or null if we do not
  * surface it. Providers come from delegated routing and blocks are fetched
- * over HTTP from the trustless gateways they point to, so only the gateway
- * block-fetch events are surfaced.
+ * over HTTP from the trustless gateways they point to, so the lines show the
+ * provider lookup, each provider found, and the endpoint being fetched from.
+ * Per-block events are not surfaced; callers show each distinct line once.
  */
 export function progressEventToLine(
   type: string,
   detail: unknown,
 ): string | null {
-  if (type === "trustless-gateway:get-block:fetch") {
-    const host = hostOf(detail);
-    return host ? `fetching from ${host}` : "fetching block";
+  switch (type) {
+    case "helia:routing:find-providers:start":
+      return "finding providers";
+    case "trustless-gateway:found-provider": {
+      const host = hostOf(detail);
+      return host ? `provider ${host}` : null;
+    }
+    case "helia:block-brokers:query-provider:start": {
+      const host = hostOf((detail as { provider?: unknown; } | null)?.provider);
+      return host ? `fetching from ${host}` : null;
+    }
+    default:
+      return null;
   }
-  return null;
 }
 
 function hostOf(detail: unknown): string | null {
