@@ -174,4 +174,94 @@ describe("delegatedRetrievalInit", () => {
       await helia.stop();
     }
   });
+  /** Router answer listing one https trustless-gateway provider per host. */
+  function providers(...hosts: string[]): Response {
+    return json({
+      Providers: hosts.map((host, i) => ({
+        Schema: "peer",
+        ID:
+          [
+            "12D3KooWDpJ7As7BWAwRMfu1VU2WCqNjvq387JEYKDBj4kx6nXTN",
+            "12D3KooWDect8DhuEGwWRm3WmbwYE1dkEYsQw7JQAqobmoLWk4fr",
+          ][i],
+        Protocols: ["transport-ipfs-gateway-http"],
+        Addrs: [`/dns4/${host}/tcp/443/https`],
+      })),
+    });
+  }
+
+  async function getBlock(
+    helia: Awaited<ReturnType<typeof startHelia>>,
+    cid: CID,
+  ): Promise<number> {
+    let bytes = 0;
+    for await (
+      const chunk of helia.blockstore.get(cid, {
+        signal: AbortSignal.timeout(2000),
+      })
+    ) {
+      bytes += chunk.byteLength;
+    }
+    return bytes;
+  }
+
+  function startHelia() {
+    return createHeliaLight({
+      blockstore: new MemoryBlockstore(),
+      datastore: new MemoryDatastore(),
+      ...delegatedRetrievalInit(["https://r1.test"]),
+    })
+      .start();
+  }
+
+  test("rejects a block whose bytes do not match the CID", async () => {
+    const cid = CID.parse(EMPTY_CID);
+    const requested: string[] = [];
+    globalThis.fetch = (async (input: RequestInfo | URL) => {
+      const url = String(input instanceof Request ? input.url : input);
+      requested.push(url);
+      if (url.startsWith("https://r1.test/routing/v1/providers/")) {
+        return providers("p.test");
+      }
+      if (url === `https://p.test/ipfs/${cid}?format=raw`) {
+        return new Response(new TextEncoder().encode("forged"));
+      }
+      return new Response("not found", { status: 404 });
+    }) as typeof fetch;
+    const helia = await startHelia();
+    try {
+      await expect(getBlock(helia, cid)).rejects.toThrow();
+      expect(requested).toContain(`https://p.test/ipfs/${cid}?format=raw`);
+      expect(await helia.blockstore.has(cid)).toBe(false);
+    } finally {
+      await helia.stop();
+    }
+  });
+
+  test("falls back to the next provider when one fails", async () => {
+    const cid = CID.parse(EMPTY_CID);
+    const requested: string[] = [];
+    globalThis.fetch = (async (input: RequestInfo | URL) => {
+      const url = String(input instanceof Request ? input.url : input);
+      requested.push(url);
+      if (url.startsWith("https://r1.test/routing/v1/providers/")) {
+        return providers("down.test", "up.test");
+      }
+      if (url === `https://down.test/ipfs/${cid}?format=raw`) {
+        return new Response("error", { status: 500 });
+      }
+      if (url === `https://up.test/ipfs/${cid}?format=raw`) {
+        return new Response(new Uint8Array(0));
+      }
+      return new Response("not found", { status: 404 });
+    }) as typeof fetch;
+    const helia = await startHelia();
+    try {
+      expect(await getBlock(helia, cid)).toBe(0);
+      expect(requested).toContain(`https://down.test/ipfs/${cid}?format=raw`);
+      expect(requested).toContain(`https://up.test/ipfs/${cid}?format=raw`);
+    } finally {
+      await helia.stop();
+    }
+  });
 });

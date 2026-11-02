@@ -9,7 +9,10 @@ export interface PinHooks {
 }
 
 export interface PinOptions {
-  /** Aborts the pin if the root block has not arrived in this many ms. */
+  /**
+   * Aborts the pin if its first step (the root block) has not completed in
+   * this many ms. Does not bound the background drain of the remaining blocks.
+   */
   rootTimeoutMs?: number;
 }
 
@@ -19,18 +22,7 @@ export async function fetchRootThenDrain(
   hooks?: PinHooks,
   opts?: PinOptions,
 ): Promise<void> {
-  // Breadth-first so the directory structure and the first block of every
-  // file are cached before any one file's deep blocks.
   const controller = new AbortController();
-  const timer = opts?.rootTimeoutMs != null
-    ? setTimeout(
-      () =>
-        controller.abort(
-          new Error(`root block not fetched in ${opts.rootTimeoutMs}ms`),
-        ),
-      opts.rootTimeoutMs,
-    )
-    : undefined;
   // Walk through a session for the root: providers are looked up once for the
   // root and reused for every child block. Without it each block outside a
   // session costs its own router lookup. Fetched blocks still land in the
@@ -40,6 +32,8 @@ export async function fetchRootThenDrain(
   });
   const addOpts = {
     signal: controller.signal,
+    // Breadth-first so the directory structure and the first block of every
+    // file are cached before any one file's deep blocks.
     walker: (
       components: Parameters<ReturnType<typeof breadthFirstWalker>>[0],
     ) => breadthFirstWalker()({ ...components, blockstore: session }),
@@ -50,6 +44,17 @@ export async function fetchRootThenDrain(
       }
       : {}),
   };
+  // Abort the whole pin if the root block has not arrived within
+  // rootTimeoutMs; cleared once it has.
+  const timer = opts?.rootTimeoutMs != null
+    ? setTimeout(
+      () =>
+        controller.abort(
+          new Error(`root block not fetched in ${opts.rootTimeoutMs}ms`),
+        ),
+      opts.rootTimeoutMs,
+    )
+    : undefined;
   let iter: AsyncGenerator<CID>;
   try {
     iter = helia.pins.add(cid, addOpts);
@@ -59,6 +64,8 @@ export async function fetchRootThenDrain(
       hooks?.onSuccess?.();
       return;
     }
+    // Lower layers may rethrow a generic AbortError; keep the budget reason.
+    if (controller.signal.aborted) throw controller.signal.reason ?? err;
     throw err;
   } finally {
     clearTimeout(timer);

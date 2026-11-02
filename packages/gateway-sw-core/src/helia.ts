@@ -13,7 +13,10 @@ export interface GatewayHeliaOpts {
 
 const DEFAULT_NAMESPACE = "@cypsela/gateway-sw-core";
 
-/** Address types the SW fetches from: https trustless gateways. */
+/**
+ * Router address filter: keep only providers with an https multiaddr, since
+ * the SW fetches blocks over HTTP.
+ */
 export const DEFAULT_FILTER_ADDRS: readonly string[] = ["https"];
 
 /** Provider protocols a browser can fetch from. */

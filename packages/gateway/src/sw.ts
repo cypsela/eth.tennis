@@ -59,6 +59,11 @@ if (DELEGATED_ROUTER_URLS.length === 0) {
     "VITE_DELEGATED_ROUTER_URLS must be set to a non-empty comma-separated list",
   );
 }
+for (const url of DELEGATED_ROUTER_URLS) {
+  if (!URL.canParse(url)) {
+    throw new Error(`VITE_DELEGATED_ROUTER_URLS has an invalid URL: ${url}`);
+  }
+}
 const SHELL_ASSETS = __SHELL_ASSETS__;
 const BYPASS_PREFIXES = __BYPASS_PREFIXES__;
 const PRECACHE = ["/", ...SHELL_ASSETS];
@@ -69,8 +74,9 @@ const FETCH_BUDGET = {
   fetchTimeoutMs: 120_000,
 } as const;
 
-// The bootstrap root is a single block: profiling measured router lookup plus
-// first block at about 3.4 s p99 (2026-10-31).
+// Budget for the bootstrap root fetch (a router lookup plus one block).
+// Measured p99 was about 3.4 s (2026-10-31), so 30 s leaves a wide margin for
+// slow routers without leaving the boot log hanging.
 const ROOT_TIMEOUT_MS = 30_000;
 
 function isShellAsset(pathname: string): boolean {
